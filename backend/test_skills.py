@@ -1,22 +1,104 @@
-import PyPDF2
-import pdfplumber
-from docx import Document
-import os
-import re
+#!/usr/bin/env python3
+"""
+Test script for resume skill extraction functionality
+Tests the enhanced skill detection system including:
+- JavaScript detection 
+- Duplicate removal (express vs express.js)
+- Technology categorization
+- Comprehensive skill database
+"""
 
-def extract_text_from_pdf(file_path):
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from utils.resume_extractor import (
+    extract_skills_from_docx, 
+    get_skills_summary, 
+    extract_basic_info,
+    get_comprehensive_skills_database
+)
+
+def test_skill_detection():
+    """Test basic skill detection functionality"""
+    print("🧪 Testing Skill Detection")
+    print("=" * 50)
+    
+    # Test text with various skills
+    test_text = """
+    John Doe
+    Software Engineer
+    
+    Skills: Python, JavaScript, React, Express.js, Node.js, MongoDB, Docker, AWS
+    
+    Experience:
+    - Developed web applications using React and Express
+    - Built APIs with FastAPI and Django
+    - Used Blender for 3D modeling
+    - Worked with PostgreSQL and Redis databases
+    - Deployed applications using Docker and Kubernetes
+    - Experience with Git, GitHub, and CI/CD
+    
+    Education:
+    Bachelor's degree in Computer Science
     """
-    Extract text from PDF file using both PyPDF2 and pdfplumber for better coverage
+    
+    skills = extract_skills_from_docx(test_text)
+    print(f"✅ Extracted {len(skills)} skills:")
+    for skill in skills:
+        print(f"   • {skill}")
+    
+    return skills
+
+def test_duplicate_handling():
+    """Test duplicate skill handling (e.g., express vs express.js)"""
+    print("\n🔄 Testing Duplicate Handling")
+    print("=" * 50)
+    
+    # Text with potential duplicates
+    test_text = """
+    Skills: express, express.js, expressjs, react, reactjs, react.js, node, nodejs, node.js
+    Technologies: Vue, vue.js, vuejs, angular, angularjs, angular.js
     """
-    text = ""
+    
+    skills = extract_skills_from_text(test_text)
+    print(f"✅ Found {len(skills)} unique skills (duplicates removed):")
+    for skill in skills:
+        print(f"   • {skill}")
+    
+    return skills
+
+def run_quick_test():
+    """Run a quick test to verify the system works"""
+    print("🚀 Quick Test of Resume Skills Extraction")
+    print("=" * 60)
     
     try:
-        # First try with pdfplumber (better for complex layouts)
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
+        # Test basic functionality
+        test_text = "Skills: Python, JavaScript, React, Express.js, Blender, Docker"
+        skills = extract_skills_from_text(test_text)
+        
+        print(f"✅ Test text: '{test_text}'")
+        print(f"✅ Skills found: {skills}")
+        print(f"✅ Total skills: {len(skills)}")
+        
+        # Test with basic info extraction
+        basic_info = extract_basic_info(test_text)
+        skills_summary = basic_info.get('skills_summary', {})
+        
+        print(f"\n📂 Skills by category:")
+        for category, category_skills in skills_summary.items():
+            print(f"   {category}: {category_skills}")
+        
+        print("\n✅ Quick test completed successfully!")
+        
+    except Exception as e:
+        print(f"\n❌ Test failed with error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    run_quick_test()
         
         # If pdfplumber didn't extract much text, try PyPDF2
         if len(text.strip()) < 100:

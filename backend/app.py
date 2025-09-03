@@ -1,10 +1,34 @@
 from flask import Flask, request, jsonify
 import os
 from utils.resume_extractor import extract_resume_text, clean_extracted_text, extract_basic_info
+from utils.gemini_service import GeminiService
+from config import get_config, check_config
 
 app = Flask(__name__)
-UPLOAD_FOLDER = './uploads'
+
+# Load configuration
+config = get_config()
+app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
+
+UPLOAD_FOLDER = config.UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Check configuration on startup
+print("Checking configuration...")
+config_valid = check_config()
+
+# Initialize Gemini service
+try:
+    if config_valid:
+        gemini_service = GeminiService()
+        print("Gemini AI service initialized successfully")
+    else:
+        print("Configuration issues detected. AI features may not work properly.")
+        gemini_service = None
+except Exception as e:
+    print(f"Warning: Gemini AI service failed to initialize: {str(e)}")
+    print("AI-powered features will be disabled")
+    gemini_service = None
 
 @app.route('/', methods=['GET'])
 def st():
@@ -41,16 +65,68 @@ def process_resume():
         print("Goals:", goals)
         print("Location:", location)
         print("Extracted resume length:", len(clean_text))
-        print("Basic info extracted:", basic_info)
+        print("Skills found:", len(basic_info.get('skills', [])))
+        print("Skills by category:", basic_info.get('skills_summary', {}))
+
+        # Prepare preferences for AI analysis
+        preferences = {
+            "industries": industries or "Not specified",
+            "goals": goals or "Not specified", 
+            "location": location or "Not specified"
+        }
+
+        # Generate AI-powered recommendations if service is available
+        ai_recommendations = {}
+        if gemini_service:
+            try:
+                # Generate career recommendations
+                career_recs = gemini_service.generate_career_recommendations(
+                    skills_by_category=basic_info.get('skills_summary', {}),
+                    preferences=preferences,
+                    experience_level="intermediate"  # Could be determined from resume analysis
+                )
+                ai_recommendations['career_recommendations'] = career_recs
+
+                # Generate skill improvement suggestions
+                skill_suggestions = gemini_service.suggest_skill_improvements(
+                    current_skills=basic_info.get('skills', []),
+                    target_roles=career_recs.get('recommended_roles', [])[:3] if career_recs else [],
+                    preferences=preferences
+                )
+                ai_recommendations['skill_improvements'] = skill_suggestions
+
+                # Analyze resume for gaps
+                resume_analysis = gemini_service.analyze_resume_gaps(
+                    skills_by_category=basic_info.get('skills_summary', {}),
+                    preferences=preferences,
+                    extracted_text=clean_text
+                )
+                ai_recommendations['resume_analysis'] = resume_analysis
+
+                # Generate learning path for top recommended role
+                top_role = career_recs.get('recommended_roles', [{}])[0].get('title', 'Software Developer') if career_recs else 'Software Developer'
+                learning_path = gemini_service.generate_learning_path(
+                    current_skills=basic_info.get('skills', []),
+                    target_role=top_role,
+                    learning_preference="balanced"
+                )
+                ai_recommendations['learning_path'] = learning_path
+
+                print("AI recommendations generated successfully")
+            except Exception as e:
+                print(f"Error generating AI recommendations: {str(e)}")
+                ai_recommendations['error'] = str(e)
 
         # Enhanced response with extracted information
         response = {
-            "summary": "Resume processed successfully",
+            "summary": "Resume processed successfully with AI analysis",
             "extracted_info": {
                 "text_length": len(clean_text),
                 "email": basic_info.get('email'),
                 "phone": basic_info.get('phone'),
                 "detected_skills": basic_info.get('skills', []),
+                "skills_by_category": basic_info.get('skills_summary', {}),
+                "total_skills_found": len(basic_info.get('skills', [])),
                 "has_experience_keywords": len(basic_info.get('experience_keywords', [])) > 0,
                 "has_education_keywords": len(basic_info.get('education_keywords', [])) > 0
             },
@@ -59,9 +135,8 @@ def process_resume():
                 "goals": goals,
                 "location": location
             },
-            "suggested_roles": ["Backend Developer", "AI Engineer"],
-            "recommended_skills": ["Python", "Docker", "FastAPI"],
-            "raw_text_preview": clean_text[:500] + "..." if len(clean_text) > 500 else clean_text
+            "ai_insights": ai_recommendations,
+    
         }
         
     except Exception as e:
@@ -121,12 +196,21 @@ def extract_resume():
             },
             "extracted_content": {
                 "full_text": clean_text,
-                "basic_info": basic_info
+                "basic_info": {
+                    "email": basic_info.get('email'),
+                    "phone": basic_info.get('phone'),
+                    "skills": basic_info.get('skills', []),
+                    "skills_by_category": basic_info.get('skills_summary', {}),
+                    "experience_keywords": basic_info.get('experience_keywords', []),
+                    "education_keywords": basic_info.get('education_keywords', [])
+                }
             },
             "analysis": {
                 "has_contact_info": bool(basic_info.get('email') or basic_info.get('phone')),
                 "skills_detected": len(basic_info.get('skills', [])),
-                "appears_complete": len(clean_text) > 200  # Basic completeness check
+                "appears_complete": len(clean_text) > 200,
+                "top_skill_categories": list(basic_info.get('skills_summary', {}).keys())[:3],
+                "has_technical_background": len(basic_info.get('skills', [])) > 5
             }
         }
         
@@ -143,6 +227,172 @@ def extract_resume():
                 os.remove(file_path)
             except Exception as e:
                 print(f"Warning: Could not remove file {file_path}: {str(e)}")
+
+@app.route('/ai/career-recommendations', methods=['POST'])
+def get_career_recommendations():
+    """
+    Endpoint for getting AI-powered career recommendations
+    """
+    if not gemini_service:
+        return jsonify({'error': 'AI service not available'}), 503
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    skills_by_category = data.get('skills_by_category', {})
+    preferences = data.get('preferences', {})
+    experience_level = data.get('experience_level', 'intermediate')
+    
+    try:
+        recommendations = gemini_service.generate_career_recommendations(
+            skills_by_category=skills_by_category,
+            preferences=preferences,
+            experience_level=experience_level
+        )
+        
+        return jsonify({
+            'success': True,
+            'recommendations': recommendations
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error generating recommendations: {str(e)}'}), 500
+
+@app.route('/ai/skill-analysis', methods=['POST'])
+def analyze_skills():
+    """
+    Endpoint for AI-powered skill gap analysis and improvement suggestions
+    """
+    if not gemini_service:
+        return jsonify({'error': 'AI service not available'}), 503
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    current_skills = data.get('current_skills', [])
+    target_roles = data.get('target_roles', [])
+    preferences = data.get('preferences', {})
+    
+    try:
+        skill_analysis = gemini_service.suggest_skill_improvements(
+            current_skills=current_skills,
+            target_roles=target_roles,
+            preferences=preferences
+        )
+        
+        return jsonify({
+            'success': True,
+            'analysis': skill_analysis
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error analyzing skills: {str(e)}'}), 500
+
+@app.route('/ai/resume-analysis', methods=['POST'])
+def analyze_resume_ai():
+    """
+    Endpoint for AI-powered resume analysis
+    """
+    if not gemini_service:
+        return jsonify({'error': 'AI service not available'}), 503
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    skills_by_category = data.get('skills_by_category', {})
+    preferences = data.get('preferences', {})
+    resume_text = data.get('resume_text', '')
+    
+    if not resume_text:
+        return jsonify({'error': 'Resume text is required'}), 400
+    
+    try:
+        analysis = gemini_service.analyze_resume_gaps(
+            skills_by_category=skills_by_category,
+            preferences=preferences,
+            extracted_text=resume_text
+        )
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error analyzing resume: {str(e)}'}), 500
+
+@app.route('/ai/learning-path', methods=['POST'])
+def generate_learning_path():
+    """
+    Endpoint for generating personalized learning paths
+    """
+    if not gemini_service:
+        return jsonify({'error': 'AI service not available'}), 503
+    
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    current_skills = data.get('current_skills', [])
+    target_role = data.get('target_role', '')
+    learning_preference = data.get('learning_preference', 'balanced')
+    
+    if not target_role:
+        return jsonify({'error': 'Target role is required'}), 400
+    
+    try:
+        learning_path = gemini_service.generate_learning_path(
+            current_skills=current_skills,
+            target_role=target_role,
+            learning_preference=learning_preference
+        )
+        
+        return jsonify({
+            'success': True,
+            'learning_path': learning_path
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error generating learning path: {str(e)}'}), 500
+
+@app.route('/ai/status', methods=['GET'])
+def ai_service_status():
+    """
+    Check if AI service is available and working
+    """
+    if not gemini_service:
+        return jsonify({
+            'available': False,
+            'message': 'AI service not initialized'
+        })
+    
+    try:
+        # Test with a simple request
+        test_response = gemini_service.generate_career_recommendations(
+            skills_by_category={'technical': ['python']},
+            preferences={'industries': 'technology'},
+            experience_level='intermediate'
+        )
+        
+        return jsonify({
+            'available': True,
+            'message': 'AI service is working',
+            'api_configured': bool(os.getenv('GEMINI_API_KEY'))
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'available': False,
+            'message': f'AI service error: {str(e)}',
+            'api_configured': bool(os.getenv('GEMINI_API_KEY'))
+        })
 
 if __name__ == '__main__':
     app.run(port=5000,debug=True)
