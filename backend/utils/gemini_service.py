@@ -269,7 +269,8 @@ CURRENT SKILLS: {', '.join(current_skills)}
 TARGET ROLE: {target_role}
 LEARNING PREFERENCE: {learning_preference} (practical/theoretical/balanced)
 
-Generate a learning path in this JSON format:
+Generate a learning path in this JSON format
+(give me only the free courses):
 {{
   "learning_path": {{
     "total_duration": "6-12 months",
@@ -285,7 +286,7 @@ Generate a learning path in this JSON format:
             "name": "Course Name",
             "provider": "Platform",
             "duration": "4 weeks",
-            "cost": "Free/$50"
+            "cost": "Free"
           }}
         ],
         "projects": ["project1", "project2"],

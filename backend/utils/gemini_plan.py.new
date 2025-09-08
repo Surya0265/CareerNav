@@ -1,0 +1,205 @@
+"""
+Gemini AI Service for Career Plan Generation
+Generates AI-powered personalized career plans with Mermaid diagram visualization
+"""
+
+import os
+import sys
+import json
+import re
+import time
+import google.generativeai as genai
+from typing import Dict, List, Any
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+class GeminiCareerPlanService:
+    def __init__(self):
+        self.api_key = os.getenv('GEMINI_API_KEY')
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables")
+        
+        genai.configure(api_key=self.api_key)
+        # Load the preferred Gemini model
+        try:
+            # Try the latest model first
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            print("Using Gemini 1.5 Flash model for career plan")
+        except Exception as e:
+            print(f"Failed to load gemini-1.5-flash: {e}")
+            try:
+                self.model = genai.GenerativeModel('gemini-1.5-pro')
+                print("Using Gemini 1.5 Pro model for career plan")
+            except Exception as e2:
+                print(f"Failed to load gemini-1.5-pro: {e2}")
+                # Final fallback
+                self.model = genai.GenerativeModel('gemini-pro')
+                print("Using Gemini Pro model for career plan")
+    
+    def generate_career_plan(self,
+                            current_skills: List[str],
+                            target_job: str,
+                            timeframe_months: int,
+                            additional_context: Dict = None) -> Dict[str, Any]:
+        """
+        Generate a personalized career plan with Mermaid diagram code
+        
+        Parameters:
+            current_skills (list): List of user's current skills
+            target_job (str): The job role the user wants to achieve
+            timeframe_months (int): Number of months for the career transition
+            additional_context (dict): Optional additional context
+            
+        Returns:
+            dict: A structured career plan with Mermaid flowchart
+        """
+        try:
+            max_retries = 3
+            retry_delay = 2  # seconds
+            
+            # Format the skills
+            skills_text = ", ".join(current_skills) if current_skills else "various technical skills"
+            
+            # Prepare the prompt
+            prompt = f"""
+Create a detailed career transition plan for someone with the following skills: {skills_text} 
+who wants to become a {target_job} within {timeframe_months} months.
+
+Structure your response in this format:
+1. A detailed plan with learning phases, key milestones, and skill acquisition stages
+2. A Mermaid flowchart code that visualizes this career path (use the flowchart type)
+
+For the Mermaid flowchart:
+- Use a clean, clear structure showing the progression from current skills to target role
+- Include key learning phases, certification points, and project milestones
+- Use different node shapes and colors to indicate different types of activities (learning, project work, certification)
+- Ensure arrows clearly show the path progression
+
+Make sure the Mermaid code is valid and properly formatted. Return both the written plan and the Mermaid code.
+"""
+            
+            # Generate content with retry mechanism
+            content = None
+            for attempt in range(max_retries):
+                try:
+                    response = self.model.generate_content(prompt)
+                    content = response.text
+                    break
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        print(f"Content generation retry {attempt+1}/{max_retries} after error: {str(e)}")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        raise Exception(f"Failed to generate content: {str(e)}")
+                        
+            if not content:
+                raise Exception("Failed to generate content after multiple retries")
+            
+            # Extract Mermaid code
+            mermaid_match = re.search(r'```mermaid\s+(.*?)\s+```', content, re.DOTALL)
+            if mermaid_match:
+                mermaid_code = mermaid_match.group(1).strip()
+                # Remove the mermaid block from the text to get just the plan
+                plan_text = content.replace(mermaid_match.group(0), '').strip()
+            else:
+                # If no mermaid code was found, try to find it without the mermaid tag
+                mermaid_match = re.search(r'```\s*(flowchart\s+TD.*?)```', content, re.DOTALL)
+                if mermaid_match:
+                    mermaid_code = mermaid_match.group(1).strip()
+                    plan_text = content.replace(mermaid_match.group(0), '').strip()
+                else:
+                    # If still no match, return the whole response as the plan
+                    mermaid_code = ""
+                    plan_text = content.strip()
+            
+            return {
+                "plan": plan_text,
+                "mermaid_code": mermaid_code,
+                "full_response": content
+            }
+        except Exception as e:
+            print(f"Error generating career plan: {str(e)}")
+            # Return a fallback plan when API fails
+            return self.generate_fallback_plan(current_skills, target_job, timeframe_months)
+    
+    def generate_fallback_plan(self, current_skills: List[str], target_job: str, timeframe_months: int) -> Dict[str, Any]:
+        """Generate a fallback career plan when the API call fails"""
+        
+        skills_text = ", ".join(current_skills) if current_skills else "various technical skills"
+        
+        # Create a simple Mermaid flowchart for the career path
+        mermaid_code = f"""flowchart TD
+    A[Current Skills: {skills_text}] --> B[Skill Development]
+    B --> C[Project Building]
+    C --> D[Networking & Job Prep]
+    D --> E[Target Job: {target_job}]
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style E fill:#bbf,stroke:#333,stroke-width:2px
+    """
+        
+        # Create a simple plan text
+        plan_text = f"""
+# Career Transition Plan: From Current Skills to {target_job}
+
+## Overview
+This {timeframe_months}-month plan will help you transition from your current skillset ({skills_text}) to becoming a {target_job}.
+
+## Phase 1: Skill Development ({timeframe_months // 3} months)
+* Identify core skills needed for {target_job}
+* Take online courses on platforms like Coursera, Udemy, or LinkedIn Learning
+* Join relevant communities to learn from peers
+
+## Phase 2: Project Building ({timeframe_months // 3} months)
+* Create portfolio projects that demonstrate your skills
+* Contribute to open source if applicable
+* Document your work and learning process
+
+## Phase 3: Networking & Job Preparation ({timeframe_months // 3} months)
+* Update your resume and online profiles
+* Connect with professionals in your target field
+* Prepare for interviews and apply for positions
+
+## Key Milestones
+1. Month 1: Complete skills assessment and learning plan
+2. Month {timeframe_months // 2}: Finish first major portfolio project
+3. Month {timeframe_months}: Ready to apply for {target_job} positions
+    """
+        
+        return {
+            "plan": plan_text,
+            "mermaid_code": mermaid_code,
+            "full_response": f"{plan_text}\n\n```mermaid\n{mermaid_code}\n```"
+        }
+
+def generate_career_plan(current_skills, target_job, timeframe_months, additional_context=None):
+    """
+    Main function to generate a career plan with Mermaid flowchart
+    
+    This function provides backward compatibility with the previous implementation
+    """
+    try:
+        service = GeminiCareerPlanService()
+        return service.generate_career_plan(current_skills, target_job, timeframe_months, additional_context)
+    except Exception as e:
+        print(f"Error generating career plan: {str(e)}")
+        
+        # Create a fallback instance and generate plan
+        service = GeminiCareerPlanService()
+        return service.generate_fallback_plan(current_skills, target_job, timeframe_months)
+
+if __name__ == '__main__':
+    try:
+        current_skills = json.loads(sys.argv[1])
+        target_job = sys.argv[2]
+        timeframe_months = int(sys.argv[3])
+        additional_context = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
+        
+        result = generate_career_plan(current_skills, target_job, timeframe_months, additional_context)
+        print(json.dumps(result))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}))
+        sys.exit(1)

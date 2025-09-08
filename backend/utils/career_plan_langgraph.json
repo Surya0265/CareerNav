@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "label": "Learn Python & SQL",
+      "type": "task"
+    },
+    {
+      "id": "2",
+      "label": "Build Projects",
+      "type": "task"
+    },
+    {
+      "id": "3",
+      "label": "Prepare for Machine Learning Engineer",
+      "type": "task"
+    }
+  ],
+  "edges": [
+    {
+      "source": "1",
+      "target": "2",
+      "label": "prerequisite"
+    },
+    {
+      "source": "2",
+      "target": "3",
+      "label": "prerequisite"
+    }
+  ]
+}
