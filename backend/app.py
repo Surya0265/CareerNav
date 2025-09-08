@@ -90,7 +90,7 @@ def process_resume():
                 # Generate skill improvement suggestions
                 skill_suggestions = gemini_service.suggest_skill_improvements(
                     current_skills=basic_info.get('skills', []),
-                    target_roles=career_recs.get('recommended_roles', [])[:3] if career_recs else [],
+                   target_roles=[role.get('title', '') for role in career_recs.get('recommended_roles', [])[:3]] if career_recs else ['Software Developer'],
                     preferences=preferences
                 )
                 ai_recommendations['skill_improvements'] = skill_suggestions
