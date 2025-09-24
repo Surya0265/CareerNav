@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+console.log('Defining User model schema');
+
 const UserSchema = new mongoose.Schema(
   {
     name: {
@@ -47,4 +49,18 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('User', UserSchema);
+// Add pre-save hook for logging
+UserSchema.pre('save', function(next) {
+  console.log('Pre-save hook triggered for user:', this.email);
+  next();
+});
+
+// Add post-save hook for logging
+UserSchema.post('save', function(doc) {
+  console.log('User successfully saved to database:', doc.email);
+});
+
+const User = mongoose.model('User', UserSchema);
+console.log('User model registered with Mongoose');
+
+module.exports = User;
