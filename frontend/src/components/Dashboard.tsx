@@ -27,19 +27,25 @@ import {
   Calendar,
   BookOpen
 } from 'lucide-react';
+import { BackButton } from './shared/BackButton';
 
 interface DashboardProps {
   user: any;
   onNavigate: (view: string) => void;
   onLogout: () => void;
+  onBack?: () => void;
+  canGoBack?: boolean;
 }
 
-export function Dashboard({ user, onNavigate, onLogout }: DashboardProps) {
+export function Dashboard({ user, onNavigate, onLogout, onBack, canGoBack = false }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const showBackButton = Boolean(onBack && canGoBack);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, active: true },
+    { id: 'ai-analysis', label: 'AI Analysis', icon: Brain },
     { id: 'resume', label: 'Resume Analysis', icon: Upload },
+    { id: 'skills', label: 'My Skills', icon: Sparkles },
     { id: 'recommendations', label: 'Job Recommendations', icon: Target },
     { id: 'podcasts', label: 'Podcasts & News', icon: TrendingUp },
     { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark },
@@ -111,7 +117,8 @@ export function Dashboard({ user, onNavigate, onLogout }: DashboardProps) {
   ];
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50/30 via-white to-cyan-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
+  
+  <div className="flex h-screen bg-gradient-to-br from-blue-50/30 via-white to-cyan-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-blue-900/20">
       {/* Sidebar */}
       <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 w-72 bg-sidebar/90 backdrop-blur-xl border-r border-sidebar-border transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-between h-20 px-8 border-b border-sidebar-border">
@@ -170,7 +177,13 @@ export function Dashboard({ user, onNavigate, onLogout }: DashboardProps) {
         {/* Header */}
         <header className="bg-card/90 backdrop-blur-xl border-b border-border px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 sm:space-x-6">
+              {showBackButton && (
+                <BackButton
+                  onClick={() => onBack?.()}
+                  className="hidden sm:inline-flex"
+                />
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -211,6 +224,32 @@ export function Dashboard({ user, onNavigate, onLogout }: DashboardProps) {
 
         {/* Dashboard Content */}
         <main className="flex-1 overflow-auto p-8">
+          {/* AI Analysis Quick Action */}
+          <div className="mb-6">
+            <Card className="border-0 bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-xl">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur">
+                      <Brain className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">AI Career Analysis</h3>
+                      <p className="text-purple-100">Get personalized insights powered by AI</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => onNavigate('ai-analysis')} 
+                    className="bg-white text-purple-600 hover:bg-white/90 font-semibold"
+                  >
+                    Analyze with AI
+                    <ArrowUpRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-xl shadow-green-500/25">
