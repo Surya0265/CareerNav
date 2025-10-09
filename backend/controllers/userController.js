@@ -30,6 +30,10 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      skills: {
+        technical: [],
+        soft: []
+      },
       preferences: {
         industries: [],
         jobInterests: [],
@@ -339,6 +343,242 @@ const deleteUser = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get user skills
+ * @route   GET /api/users/skills
+ * @access  Private
+ */
+const getUserSkills = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      technical: user.skills?.technical || [],
+      soft: user.skills?.soft || []
+    });
+  } catch (error) {
+    console.error('Error in getUserSkills:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};
+
+/**
+ * @desc    Add user skill
+ * @route   POST /api/users/skills
+ * @access  Private
+ */
+const addUserSkill = async (req, res) => {
+  try {
+    const { name, level, type } = req.body;
+
+    if (!name || !type || !['technical', 'soft'].includes(type)) {
+      return res.status(400).json({ 
+        error: 'Please provide a skill name and valid type (technical or soft)' 
+      });
+    }
+    
+    const skillLevel = level || 'intermediate';
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Initialize skills array if not exists
+    if (!user.skills) {
+      user.skills = { technical: [], soft: [] };
+    }
+    
+    // Check if skill already exists
+    const skillExists = user.skills[type].find(
+      skill => skill.name.toLowerCase() === name.toLowerCase()
+    );
+    
+    if (skillExists) {
+      return res.status(400).json({ error: 'Skill already exists' });
+    }
+    
+    // Add new skill
+    const newSkill = { 
+      name, 
+      level: skillLevel,
+      verified: false
+    };
+    
+    user.skills[type].push(newSkill);
+    await user.save();
+    
+    res.status(201).json({
+      message: 'Skill added successfully',
+      skill: newSkill
+    });
+  } catch (error) {
+    console.error('Error in addUserSkill:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};
+
+/**
+ * @desc    Update user skill
+ * @route   PUT /api/users/skills/:id
+ * @access  Private
+ */
+const updateUserSkill = async (req, res) => {
+  try {
+    const { skillId } = req.params;
+    const { name, level, type } = req.body;
+    
+    if (!type || !['technical', 'soft'].includes(type)) {
+      return res.status(400).json({ 
+        error: 'Please provide a valid skill type (technical or soft)' 
+      });
+    }
+    
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Find the skill to update
+    const skillIndex = user.skills[type].findIndex(
+      skill => skill._id.toString() === skillId
+    );
+    
+    if (skillIndex === -1) {
+      return res.status(404).json({ error: 'Skill not found' });
+    }
+    
+    // Update skill
+    if (name) user.skills[type][skillIndex].name = name;
+    if (level) user.skills[type][skillIndex].level = level;
+    
+    await user.save();
+    
+    res.json({
+      message: 'Skill updated successfully',
+      skill: user.skills[type][skillIndex]
+    });
+  } catch (error) {
+    console.error('Error in updateUserSkill:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};
+
+/**
+ * @desc    Delete user skill
+ * @route   DELETE /api/users/skills/:id
+ * @access  Private
+ */
+const deleteUserSkill = async (req, res) => {
+  try {
+    const { skillId } = req.params;
+    const { type } = req.query;
+    
+    if (!type || !['technical', 'soft'].includes(type)) {
+      return res.status(400).json({ 
+        error: 'Please provide a valid skill type (technical or soft)' 
+      });
+    }
+    
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Find and remove the skill
+    const skillIndex = user.skills[type].findIndex(
+      skill => skill._id.toString() === skillId
+    );
+    
+    if (skillIndex === -1) {
+      return res.status(404).json({ error: 'Skill not found' });
+    }
+    
+    user.skills[type].splice(skillIndex, 1);
+    await user.save();
+    
+    res.json({ message: 'Skill removed successfully' });
+  } catch (error) {
+    console.error('Error in deleteUserSkill:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};
+
+/**
+ * @desc    Add multiple skills at once (useful for resume extraction)
+ * @route   POST /api/users/skills/batch
+ * @access  Private
+ */
+const addUserSkillsBatch = async (req, res) => {
+  try {
+    const { skills } = req.body;
+    
+    if (!skills || !Array.isArray(skills)) {
+      return res.status(400).json({ error: 'Please provide an array of skills' });
+    }
+    
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Initialize skills array if not exists
+    if (!user.skills) {
+      user.skills = { technical: [], soft: [] };
+    }
+    
+    const addedSkills = [];
+    const existingSkills = [];
+    
+    // Process each skill
+    for (const skill of skills) {
+      const { name, level = 'intermediate', type = 'technical' } = skill;
+      
+      if (!name || !['technical', 'soft'].includes(type)) {
+        continue; // Skip invalid skills
+      }
+      
+      // Check if skill already exists
+      const skillExists = user.skills[type].find(
+        s => s.name.toLowerCase() === name.toLowerCase()
+      );
+      
+      if (skillExists) {
+        existingSkills.push(name);
+        continue;
+      }
+      
+      // Add new skill
+      const newSkill = { 
+        name, 
+        level,
+        verified: true // Verified because it came from resume
+      };
+      
+      user.skills[type].push(newSkill);
+      addedSkills.push(newSkill);
+    }
+    
+    await user.save();
+    
+    res.status(201).json({
+      message: 'Skills processed successfully',
+      added: addedSkills,
+      existing: existingSkills
+    });
+  } catch (error) {
+    console.error('Error in addUserSkillsBatch:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -348,5 +588,10 @@ module.exports = {
   getUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  getUserSkills,
+  addUserSkill,
+  updateUserSkill,
+  deleteUserSkill,
+  addUserSkillsBatch
 };

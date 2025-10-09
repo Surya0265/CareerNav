@@ -9,7 +9,12 @@ const {
   getUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  getUserSkills,
+  addUserSkill,
+  updateUserSkill,
+  deleteUserSkill,
+  addUserSkillsBatch
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -22,6 +27,18 @@ router.route('/profile')
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile)
   .delete(protect, deleteUserProfile);
+
+// User skills management routes
+router.route('/skills')
+  .get(protect, getUserSkills)
+  .post(protect, addUserSkill);
+
+router.route('/skills/batch')
+  .post(protect, addUserSkillsBatch);
+  
+router.route('/skills/:skillId')
+  .put(protect, updateUserSkill)
+  .delete(protect, deleteUserSkill);
 
 // Admin routes
 router.route('/')

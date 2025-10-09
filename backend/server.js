@@ -21,8 +21,12 @@ const jobRoutes = require('./routes/jobRoutes');
 const timelineRoutes = require('./routes/timelineRoutes');
 const userRoutes = require('./routes/userRoutes');
 
+
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // allow Vite frontend
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -71,6 +75,14 @@ app.use('/api/users', userRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/timeline', timelineRoutes);
+
+// Add the skills routes
+const skillsRoutes = require('./routes/skillsRoutes');
+app.use('/api/skills', skillsRoutes);
+
+// Add the AI analysis routes
+const aiRoutes = require('./routes/aiRoutes');
+app.use('/api/ai', aiRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Backend running on port http://localhost:${PORT}`));

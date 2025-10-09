@@ -1,9 +1,10 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+// Point directly to the backend server URL
+const API_BASE_URL = 'http://localhost:3000';
 
 // Authentication API endpoints
 export async function loginUser(email: string, password: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,7 +30,7 @@ export async function loginUser(email: string, password: string) {
 
 export async function signupUser(name: string, email: string, password: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/signup`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

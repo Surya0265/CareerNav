@@ -20,22 +20,26 @@ import {
   Filter,
   Menu,
   LogOut,
-  ArrowLeft,
-  Target
+  Target,
+  Award
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { BackButton } from './shared/BackButton';
 
 interface PodcastsNewsProps {
   user: any;
   onNavigate: (view: string) => void;
   onLogout: () => void;
   onSaveItem: (item: any) => void;
+  onBack?: () => void;
+  canGoBack?: boolean;
 }
 
-export function PodcastsNews({ user, onNavigate, onLogout, onSaveItem }: PodcastsNewsProps) {
+export function PodcastsNews({ user, onNavigate, onLogout, onSaveItem, onBack, canGoBack = false }: PodcastsNewsProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [savedItems, setSavedItems] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const showBackButton = Boolean(onBack && canGoBack);
 
   const podcasts = [
     {
@@ -155,6 +159,7 @@ export function PodcastsNews({ user, onNavigate, onLogout, onSaveItem }: Podcast
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Brain },
     { id: 'resume', label: 'Resume Analysis', icon: Users },
+    { id: 'skills', label: 'My Skills', icon: Award },
     { id: 'recommendations', label: 'Job Recommendations', icon: Target },
     { id: 'podcasts', label: 'Podcasts & News', icon: Headphones, active: true },
     { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark }
@@ -260,7 +265,7 @@ export function PodcastsNews({ user, onNavigate, onLogout, onSaveItem }: Podcast
         {/* Header */}
         <header className="bg-card/80 backdrop-blur-xl border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Button
                 variant="ghost"
                 size="sm"
@@ -269,15 +274,11 @@ export function PodcastsNews({ user, onNavigate, onLogout, onSaveItem }: Podcast
               >
                 <Menu className="w-5 h-5" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onNavigate('dashboard')}
-                className="text-muted-foreground hover:text-primary"
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Dashboard
-              </Button>
+              {showBackButton ? (
+                <BackButton onClick={() => onBack?.()} className="hidden sm:inline-flex" />
+              ) : (
+                <BackButton onClick={() => onNavigate('dashboard')} label="Back to Dashboard" />
+              )}
             </div>
             
             <div className="flex items-center space-x-4">
@@ -299,6 +300,11 @@ export function PodcastsNews({ user, onNavigate, onLogout, onSaveItem }: Podcast
 
         {/* Podcasts & News Content */}
         <main className="flex-1 overflow-auto p-6">
+          {showBackButton && (
+            <div className="mb-4 sm:hidden">
+              <BackButton onClick={() => onBack?.()} variant="outline" className="w-full justify-center" />
+            </div>
+          )}
           <div className="max-w-7xl mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl text-foreground mb-2">Podcasts & News</h1>

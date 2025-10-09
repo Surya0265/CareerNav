@@ -1,0 +1,336 @@
+{
+  "info": {
+    "_postman_id": "cnav-backend-collection-2025",
+    "name": "CareerNav Backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "All backend endpoints for CareerNav (Node.js/Express and Python Flask)"
+  },
+  "item": [
+    {
+      "name": "User Signup",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/users/signup", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "signup"] }
+      }
+    },
+    {
+      "name": "User Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/users/login", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "login"] }
+      }
+    },
+    {
+      "name": "Get User Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "http://localhost:3000/api/users/profile", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "profile"] }
+      }
+    },
+    {
+      "name": "Update User Profile",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated Name\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/users/profile", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "profile"] }
+      }
+    },
+    {
+      "name": "Add Skill (Manual)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"JavaScript\",\n  \"level\": \"intermediate\",\n  \"type\": \"technical\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/skills", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "skills"] }
+      }
+    },
+    {
+      "name": "Get All Skills",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "http://localhost:3000/api/skills", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "skills"] }
+      }
+    },
+    {
+      "name": "Update Skill",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated Skill\",\n  \"level\": \"advanced\",\n  \"type\": \"technical\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/skills/{{skillId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "skills", "{{skillId}}"] }
+      }
+    },
+    {
+      "name": "Delete Skill",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "http://localhost:3000/api/skills/{{skillId}}?type=technical", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "skills", "{{skillId}}"], "query": [{"key": "type", "value": "technical"}] }
+      }
+    },
+    {
+      "name": "Batch Add Skills (Extracted)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"skills\": [\n    { \"name\": \"Python\", \"level\": \"advanced\", \"type\": \"technical\" },\n    { \"name\": \"Teamwork\", \"level\": \"expert\", \"type\": \"soft\" }\n  ]\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/skills/batch", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "skills", "batch"] }
+      }
+    },
+    {
+      "name": "Resume Upload (Extract Skills)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "resume", "type": "file", "src": "" }
+          ]
+        },
+        "url": { "raw": "http://127.0.0.1:5000/extract-skills", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["extract-skills"] }
+      }
+    },
+    {
+      "name": "Resume Upload (Save to DB)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"skills\": [\n    { \"name\": \"Python\", \"level\": \"advanced\", \"type\": \"technical\" }\n  ]\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/skills/extract", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "skills", "extract"] }
+      }
+    },
+    {
+      "name": "Get Jobs by Resume Skills",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "resume", "type": "file", "src": "" }
+          ]
+        },
+        "url": { "raw": "http://localhost:3000/api/jobs/jobs-by-resume", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "jobs", "jobs-by-resume"] }
+      }
+    },
+    {
+      "name": "Get Timeline",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "http://localhost:3000/api/timeline", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "timeline"] }
+      }
+    },
+    {
+      "name": "Resume Upload (Node.js)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "resume", "type": "file", "src": "" }
+          ]
+        },
+        "url": { "raw": "http://localhost:3000/api/resume/upload", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "resume", "upload"] }
+      }
+    },
+    {
+      "name": "AI Analyze Existing Skills",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"industry\": \"technology\",\n  \"goals\": \"I want to become a senior software engineer and lead a team\",\n  \"experienceLevel\": \"intermediate\"\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/ai/analyze-existing", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ai", "analyze-existing"] }
+      }
+    },
+    {
+      "name": "AI Analyze with Resume",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "resume", "type": "file", "src": "" },
+            { "key": "industry", "value": "technology" },
+            { "key": "goals", "value": "I want to become a senior software engineer" },
+            { "key": "experienceLevel", "value": "intermediate" }
+          ]
+        },
+        "url": { "raw": "http://localhost:3000/api/ai/analyze-resume", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ai", "analyze-resume"] }
+      }
+    },
+    {
+      "name": "AI Skill Suggestions",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetRoles\": [\"Senior Software Engineer\", \"Tech Lead\"],\n  \"preferences\": {\n    \"industry\": \"technology\",\n    \"learningStyle\": \"hands-on\"\n  }\n}"
+        },
+        "url": { "raw": "http://localhost:3000/api/ai/skill-suggestions", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "ai", "skill-suggestions"] }
+      }
+    },
+    {
+      "name": "AI Career Recommendations (Python)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"skills_by_category\": {\n    \"technical\": [\"Python\", \"JavaScript\", \"React\"],\n    \"soft\": [\"Communication\", \"Leadership\"]\n  },\n  \"preferences\": {\n    \"industry\": \"technology\",\n    \"goals\": \"Lead a development team\"\n  },\n  \"experience_level\": \"intermediate\"\n}"
+        },
+        "url": { "raw": "http://127.0.0.1:5000/ai/career-recommendations", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["ai", "career-recommendations"] }
+      }
+    },
+    {
+      "name": "AI Status Check (Python)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "http://127.0.0.1:5000/ai/status", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["ai", "status"] }
+      }
+    },
+    {
+      "name": "AI Skill Improvements (Python)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"current_skills\": [\"Python\", \"JavaScript\", \"React\"],\n  \"target_roles\": [\"Senior Software Engineer\", \"Tech Lead\"],\n  \"preferences\": {\n    \"industry\": \"technology\",\n    \"learning_style\": \"hands-on\"\n  }\n}"
+        },
+        "url": { "raw": "http://127.0.0.1:5000/ai/skill-improvements", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["ai", "skill-improvements"] }
+      }
+    },
+    {
+      "name": "AI Resume Gap Analysis (Python)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"skills_by_category\": {\n    \"technical\": [\"Python\", \"JavaScript\"],\n    \"soft\": [\"Communication\"]\n  },\n  \"preferences\": {\n    \"industry\": \"technology\",\n    \"goals\": \"Become a senior developer\"\n  },\n  \"resume_text\": \"Software Engineer with 3 years experience in Python and web development...\"\n}"
+        },
+        "url": { "raw": "http://127.0.0.1:5000/ai/analyze-resume-gaps", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["ai", "analyze-resume-gaps"] }
+      }
+    },
+    {
+      "name": "AI Learning Path (Python)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"current_skills\": [\"Python\", \"HTML\", \"CSS\"],\n  \"target_role\": \"Full Stack Developer\",\n  \"learning_preference\": \"balanced\"\n}"
+        },
+        "url": { "raw": "http://127.0.0.1:5000/ai/generate-learning-path", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["ai", "generate-learning-path"] }
+      }
+    },
+    {
+      "name": "Test - Get User Skills",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "http://localhost:3000/api/users/skills", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "users", "skills"] }
+      }
+    },
+    {
+      "name": "Test - Python Extract Skills",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "resume", "type": "file", "src": "", "description": "Upload your resume file (PDF/DOC/DOCX)" }
+          ]
+        },
+        "url": { "raw": "http://127.0.0.1:5000/extract-skills", "protocol": "http", "host": ["127.0.0.1"], "port": "5000", "path": ["extract-skills"] }
+      }
+    }
+  ]
+}

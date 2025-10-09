@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { BackButton } from './shared/BackButton';
+import { getUserFromStorage } from '../utils/api';
+import { isPythonServerRunning } from '../utils/serverCheck';
 import { 
   Brain,
   Upload,
@@ -20,21 +23,47 @@ import {
   Menu,
   LogOut,
   ArrowLeft,
-  Target
+  Target,
+  Plus,
+  AlertTriangle
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { extractSkillsFromResume, saveExtractedSkills } from '../utils/skillsApiExtensions';
 
 interface ResumeUploadProps {
   user: any;
   onNavigate: (view: string) => void;
   onLogout: () => void;
+  onBack?: () => void;
+  canGoBack?: boolean;
 }
 
-export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) {
+export function ResumeUpload({ user, onNavigate, onLogout, onBack, canGoBack = false }: ResumeUploadProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [uploadStep, setUploadStep] = useState<'upload' | 'parsing' | 'review' | 'analysis'>('upload');
   const [parseProgress, setParseProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  const [isPythonServerActive, setIsPythonServerActive] = useState(true); // Assume server is running initially
+  const showBackButton = Boolean(onBack && canGoBack);
+  
+  // Check if Python server is running
+  useEffect(() => {
+    const checkServer = async () => {
+      const isRunning = await isPythonServerRunning();
+      setIsPythonServerActive(isRunning);
+      if (!isRunning) {
+        toast.error("Python server is not running. Resume processing will not work.", {
+          duration: 6000,
+          id: "python-server-error"
+        });
+      }
+    };
+    
+    checkServer();
+    // Check server every 30 seconds
+    const interval = setInterval(checkServer, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [parsedData, setParsedData] = useState({
     personalInfo: {
@@ -45,12 +74,12 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
     },
     summary: 'Experienced Full Stack Developer with 5+ years of expertise in React, Node.js, and cloud technologies. Passionate about building scalable web applications and leading development teams.',
     skills: [
-      { name: 'JavaScript', level: 'Expert', verified: true },
-      { name: 'React', level: 'Expert', verified: true },
-      { name: 'Node.js', level: 'Advanced', verified: true },
-      { name: 'TypeScript', level: 'Advanced', verified: true },
-      { name: 'Python', level: 'Intermediate', verified: false },
-      { name: 'Docker', level: 'Beginner', verified: false },
+      { name: 'JavaScript', level: 'Expert', verified: true, type: 'technical', selected: true, category: 'Technical' },
+      { name: 'React', level: 'Expert', verified: true, type: 'technical', selected: true, category: 'Technical' },
+      { name: 'Node.js', level: 'Advanced', verified: true, type: 'technical', selected: true, category: 'Technical' },
+      { name: 'TypeScript', level: 'Advanced', verified: true, type: 'technical', selected: true, category: 'Technical' },
+      { name: 'Python', level: 'Intermediate', verified: false, type: 'technical', selected: true, category: 'Technical' },
+      { name: 'Docker', level: 'Beginner', verified: false, type: 'technical', selected: true, category: 'Technical' },
     ],
     experience: [
       {
@@ -75,61 +104,257 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
     ]
   });
 
+  // Ref for file input element
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Brain },
     { id: 'resume', label: 'Resume Analysis', icon: Upload, active: true },
+    { id: 'skills', label: 'My Skills', icon: User },
     { id: 'recommendations', label: 'Job Recommendations', icon: Target },
     { id: 'podcasts', label: 'Podcasts & News', icon: GraduationCap },
     { id: 'bookmarks', label: 'Bookmarks', icon: Code }
   ];
 
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      toast.error('No file selected. Please select a valid resume file.');
+      return;
+    }
+    
+    // Check if Python server is running before proceeding
+    if (!isPythonServerActive) {
+      const serverStatus = await isPythonServerRunning();
+      setIsPythonServerActive(serverStatus);
+      
+      if (!serverStatus) {
+        toast.error(
+          "Python server is not running. Please start the Python server at http://127.0.0.1:5000 before uploading resumes.",
+          { duration: 6000 }
+        );
+        return;
+      }
+    }
     
     const file = files[0];
-    if (!file.type.includes('pdf') && !file.type.includes('doc')) {
-      toast.error('Please upload a PDF or DOC file');
+    
+    // Validate file type
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type) && 
+        !file.name.endsWith('.pdf') && 
+        !file.name.endsWith('.doc') && 
+        !file.name.endsWith('.docx')) {
+      toast.error('Please upload a PDF or Word document (.pdf, .doc, or .docx)');
+      return;
+    }
+    
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      toast.error('File is too large. Maximum size is 5MB.');
       return;
     }
 
+    console.log(`Processing file: ${file.name}, Type: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    
+    // Show parsing progress
     setUploadStep('parsing');
     setParseProgress(0);
     
-    // Simulate parsing progress
-    const interval = setInterval(() => {
+    // Set up progress simulation during upload
+    const progressInterval = setInterval(() => {
       setParseProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploadStep('review');
-          toast.success('Resume parsed successfully!');
-          return 100;
-        }
-        return prev + 10;
+        return prev < 90 ? prev + 5 : prev;
       });
-    }, 200);
+    }, 300);
+
+    try {
+      // Prepare form data for upload
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      // Use the imported getUserFromStorage function
+      const userInfo = getUserFromStorage();
+      if (!userInfo || !userInfo.token) {
+        clearInterval(progressInterval);
+        setUploadStep('upload');
+        toast.error('Authentication required. Please log in again.');
+        return;
+      }
+
+      // Use only the extract-skills endpoint for resume upload
+      const API_BASE_URL = 'http://127.0.0.1:5000'; // Python backend URL
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+
+      // Make API request to /extract-skills
+      const response = await fetch(`${API_BASE_URL}/extract-skills`, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal
+      }).catch(err => {
+        if (err.name === 'AbortError') {
+          throw new Error('Request timed out. Please ensure the Python server is running at http://127.0.0.1:5000');
+        } else {
+          throw new Error(`Connection failed: ${err.message}. Please ensure the Python server is running.`);
+        }
+      });
+
+      clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+      setParseProgress(100);
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        } else {
+          throw new Error(`Server error (${response.status}): Please check the server is running`);
+        }
+      }
+
+      // Get response data
+      const data = await response.json();
+      console.log('Extracted skills API response:', data);
+
+      // Update parsedData state with the extracted info and skills
+      setParsedData(prev => ({
+        ...prev,
+        personalInfo: {
+          name: data.extracted_info?.full_name || data.extracted_info?.email?.split('@')[0] || 'User',
+          email: data.extracted_info?.email || '',
+          phone: data.extracted_info?.phone || data.extracted_info?.phone_number || '',
+          location: data.extracted_info?.location || '',
+        },
+        skills: (data.skills || []).map((skillStr: string | { name?: string; type?: string }) => {
+          const inferredType = inferSkillType(skillStr, data.skills_by_category);
+          return {
+            name: typeof skillStr === 'string' ? skillStr : (skillStr && skillStr.name ? skillStr.name : ''),
+            level: 'Intermediate',
+            type: inferredType,
+            selected: true,
+            verified: true,
+            category: inferredType === 'soft' ? 'Soft Skill' : 'Technical'
+          };
+        }),
+        experience: Array.isArray(data.extracted_info?.experience)
+          ? data.extracted_info.experience.map((exp: Record<string, string>) => ({
+              title: exp.title || '',
+              company: exp.company || '',
+              duration: exp.duration || '',
+              description: exp.description || ''
+            }))
+          : [],
+        education: Array.isArray(data.extracted_info?.education)
+          ? data.extracted_info.education.map((edu: Record<string, string>) => ({
+              degree: edu.degree || '',
+              school: edu.school || edu.institution || '',
+              year: edu.year || ''
+            }))
+          : []
+      }));
+      setUploadStep('review');
+
+      // Helper to infer skill type from skills_by_category
+      function inferSkillType(
+        skill: string | { name?: string; type?: string },
+        categories: Record<string, string[]> | undefined
+      ) {
+        if (!categories) return 'technical';
+        const skillName = typeof skill === 'string' ? skill : (skill && skill.name ? skill.name : '');
+        if (categories.soft_skills && categories.soft_skills.includes(skillName)) return 'soft';
+        return 'technical';
+      }
+
+    } catch (error: any) {
+      clearInterval(progressInterval);
+      setUploadStep('upload');
+      console.error('Resume upload error:', error);
+      toast.error(`Upload failed: ${error.message}`);
+    }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: any) => {
     e.preventDefault();
     setDragActive(false);
-    handleFileUpload(e.dataTransfer.files);
+    
+    // Safety check for files
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files);
+    } else {
+      toast.error("No file detected. Please try again or use the Choose File button.");
+    }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: any) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent further propagation
     setDragActive(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = (e: any) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent further propagation
     setDragActive(false);
   };
 
-  const handleAnalyze = () => {
+  // Extract and save skills from resume
+  const handleExtractSkills = async (fileObj: File) => {
+    try {
+      if (!fileObj) {
+        toast.error('No file available for skills extraction');
+        return;
+      }
+      
+      // Extract skills using the API
+      const result = await extractSkillsFromResume(fileObj);
+      
+      if (!result || !result.skills || result.skills.length === 0) {
+        toast.warning('No skills were detected in your resume');
+        return;
+      }
+      
+      // Format skills for saving - add selected flag
+      const formattedSkills = result.skills.map((skill: any) => ({
+        name: skill.name,
+        level: skill.level || 'intermediate',
+        type: skill.type || 'technical',
+        selected: true
+      }));
+      
+      // Save extracted skills to user profile
+      await saveExtractedSkills(formattedSkills);
+      
+      toast.success(`Successfully extracted ${formattedSkills.length} skills from your resume`);
+      return formattedSkills;
+    } catch (error: any) {
+      console.error('Error extracting skills:', error);
+      toast.error(`Failed to extract skills: ${error.message}`);
+      return null;
+    }
+  };
+  
+  const handleAnalyze = async () => {
     setUploadStep('analysis');
+    
+    // Extract skills from the parsed resume data
+    try {
+      // We need to get the file again since we might need to reupload it
+      if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files[0]) {
+        await handleExtractSkills(fileInputRef.current.files[0]);
+      } else {
+        toast.error('Resume file not available. Please upload your resume again.');
+      }
+      
+      toast.success('Analysis complete! Your skills have been updated.');
+    } catch (error: any) {
+      toast.error(`Analysis failed: ${error.message}`);
+    }
+    
     setTimeout(() => {
-      toast.success('Analysis complete! Check your dashboard for insights.');
-      onNavigate('dashboard');
+      // Navigate to skills page instead of dashboard to show extracted skills
+      onNavigate('skills');
     }, 3000);
   };
 
@@ -198,7 +423,10 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
         {/* Header */}
         <header className="bg-card/80 backdrop-blur-xl border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              {showBackButton && (
+                <BackButton onClick={() => onBack?.()} className="hidden sm:inline-flex" />
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -214,7 +442,7 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
                 className="text-muted-foreground hover:text-primary"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Dashboard
+                Dashboard
               </Button>
             </div>
             
@@ -252,22 +480,46 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
                     <h3 className="text-xl text-foreground mb-2">Drag & Drop Your Resume</h3>
                     <p className="text-muted-foreground mb-6">or click to browse files</p>
                     
+                    {/* Use useRef for more robust file input handling */}
                     <input
+                      ref={fileInputRef}
                       type="file"
                       accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleFileUpload(e.target.files)}
+                      onChange={(e) => {
+                        if (e.target && e.target.files) {
+                          handleFileUpload(e.target.files);
+                        }
+                      }}
                       className="hidden"
                       id="resume-upload"
+                      aria-label="Resume file input"
                     />
-                    <label htmlFor="resume-upload">
-                      <Button className="cursor-pointer">
-                        Choose File
-                      </Button>
-                    </label>
+                    <Button 
+                      type="button" 
+                      className="cursor-pointer" 
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.click();
+                        } else {
+                          toast.error("File input not available. Please refresh the page and try again.");
+                        }
+                      }}
+                    >
+                      Choose File
+                    </Button>
                     
                     <p className="text-xs text-muted-foreground mt-4">
                       Supported formats: PDF, DOC, DOCX (Max 5MB)
                     </p>
+                    
+                    <div className="flex items-center justify-center mt-4 text-xs">
+                      <div className={`w-2 h-2 rounded-full mr-2 ${isPythonServerActive ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                      <span>
+                        {isPythonServerActive 
+                          ? 'Python server connected' 
+                          : 'Python server not responding - resume processing unavailable'}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -363,19 +615,19 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
                   <CardContent className="space-y-4">
                     <div>
                       <label className="text-sm text-muted-foreground">Name</label>
-                      <p className="text-foreground">{parsedData.personalInfo.name}</p>
+                      <p className="text-foreground">{parsedData.personalInfo?.name || 'Not available'}</p>
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">Email</label>
-                      <p className="text-foreground">{parsedData.personalInfo.email}</p>
+                      <p className="text-foreground">{parsedData.personalInfo?.email || 'Not available'}</p>
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">Phone</label>
-                      <p className="text-foreground">{parsedData.personalInfo.phone}</p>
+                      <p className="text-foreground">{parsedData.personalInfo?.phone || 'Not available'}</p>
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">Location</label>
-                      <p className="text-foreground">{parsedData.personalInfo.location}</p>
+                      <p className="text-foreground">{parsedData.personalInfo?.location || 'Not available'}</p>
                     </div>
                     <Button variant="outline" size="sm" className="w-full">
                       <Edit3 className="w-4 h-4 mr-2" />
@@ -394,33 +646,71 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {parsedData.skills.map((skill, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-foreground">{skill.name}</span>
-                            {skill.verified ? (
-                              <CheckCircle className="w-4 h-4 text-success" />
-                            ) : (
-                              <AlertCircle className="w-4 h-4 text-warning" />
-                            )}
+                      {parsedData.skills && Array.isArray(parsedData.skills) ? 
+                        parsedData.skills.map((skill, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <span className="text-foreground">{skill.name}</span>
+                              {skill.verified ? (
+                                <CheckCircle className="w-4 h-4 text-success" />
+                              ) : (
+                                <AlertCircle className="w-4 h-4 text-warning" />
+                              )}
+                            </div>
+                            <select 
+                              value={skill.level}
+                              onChange={(e) => editSkill(index, e.target.value)}
+                              className="text-sm border border-border rounded px-2 py-1 bg-background text-foreground"
+                            >
+                              <option>Beginner</option>
+                              <option>Intermediate</option>
+                              <option>Advanced</option>
+                              <option>Expert</option>
+                            </select>
                           </div>
-                          <select 
-                            value={skill.level}
-                            onChange={(e) => editSkill(index, e.target.value)}
-                            className="text-sm border border-border rounded px-2 py-1 bg-background text-foreground"
-                          >
-                            <option>Beginner</option>
-                            <option>Intermediate</option>
-                            <option>Advanced</option>
-                            <option>Expert</option>
-                          </select>
-                        </div>
-                      ))}
+                        ))
+                        : <p className="text-muted-foreground text-center py-2">No skills detected</p>
+                      }
                     </div>
-                    <Button variant="outline" size="sm" className="w-full mt-4">
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Add Skill
-                    </Button>
+                    <div className="flex gap-2 mt-4">
+                      <Button variant="outline" size="sm" className="w-1/2">
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Add Skill
+                      </Button>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="w-1/2"
+                        onClick={async () => {
+                          if (!parsedData.skills || parsedData.skills.length === 0) {
+                            toast.error('No skills to save.');
+                            return;
+                          }
+                          try {
+                            const formattedSkills = parsedData.skills.map((skill: any) => {
+                              const type = skill.type ?? 'technical';
+                              return {
+                                name: skill.name,
+                                level: skill.level ?? 'Intermediate',
+                                selected: skill.selected ?? true,
+                                type,
+                                verified: skill.verified ?? true,
+                                category: skill.category ?? (type === 'soft' ? 'Soft Skill' : 'Technical')
+                              };
+                            });
+
+                            await saveExtractedSkills(formattedSkills);
+                            toast.success(`${parsedData.skills.length} skills saved to your profile`);
+                          } catch (error) {
+                            const message = error instanceof Error ? error.message : String(error);
+                            toast.error(`Failed to save skills: ${message}`);
+                          }
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Save to Profile
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -466,6 +756,9 @@ export function ResumeUpload({ user, onNavigate, onLogout }: ResumeUploadProps) 
               <div className="mt-8 flex justify-center space-x-4">
                 <Button variant="outline" onClick={() => setUploadStep('upload')}>
                   Upload Different Resume
+                </Button>
+                <Button variant="outline" onClick={() => onNavigate('skills')}>
+                  View & Edit Skills
                 </Button>
                 <Button onClick={handleAnalyze} className="bg-primary hover:bg-primary/90">
                   Analyze with AI

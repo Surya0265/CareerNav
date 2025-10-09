@@ -1,3 +1,4 @@
+import React from 'react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { ThemeToggle } from './ThemeToggle';
@@ -7,7 +8,8 @@ import {
   Users,
   Headphones,
   Bookmark,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -24,13 +26,15 @@ const iconMap = {
   Target,
   Users,
   Headphones,
-  Bookmark
+  Bookmark,
+  Sparkles
 };
 
 export function AppSidebar({ user, currentPage, onNavigate, onLogout, sidebarOpen, children }: AppSidebarProps) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'Brain' },
     { id: 'resume', label: 'Resume Analysis', icon: 'Target' },
+    { id: 'skills', label: 'My Skills', icon: 'Sparkles' },
     { id: 'recommendations', label: 'Job Recommendations', icon: 'Users' },
     { id: 'podcasts', label: 'Podcasts & News', icon: 'Headphones' },
     { id: 'bookmarks', label: 'Bookmarks', icon: 'Bookmark' }
