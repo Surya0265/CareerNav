@@ -29,7 +29,7 @@ def extract_skills():
         clean_text = clean_extracted_text(extracted_text)
         
         # Extract basic information
-        basic_info = extract_basic_info(clean_text)
+        basic_info = extract_basic_info(clean_text, extracted_text)
         
         # Create a response with just the extracted skills
         response = {
@@ -38,8 +38,10 @@ def extract_skills():
             'total_skills_found': len(basic_info.get('skills', [])),
             'extracted_info': {
                 'email': basic_info.get('email', ''),
-                'phone': basic_info.get('phone_number', ''),
                 'detected_skills': basic_info.get('skills', []),
+                'experience_entries': basic_info.get('experience_entries', []),
+                'project_entries': basic_info.get('project_entries', []),
+                'experience_keywords': basic_info.get('experience_keywords', []),
             }
         }
         

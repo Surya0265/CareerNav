@@ -6,6 +6,7 @@ import { Button } from "../shared/Button.tsx";
 import { cn } from "../../utils/cn.ts";
 import { useCareerData } from "../../app/providers/CareerDataContext.ts";
 import { fetchProfile } from "../../services/auth.ts";
+import { fetchLatestResume } from "../../services/resume.ts";
 
 const navLinks = [
   { to: "/", label: "Dashboard", icon: "🏠" },
@@ -30,11 +31,36 @@ export const AppLayout = () => {
     enabled: Boolean(token),
   });
 
+  const resumeQuery = useQuery({
+    queryKey: ["latest-resume", token],
+    queryFn: fetchLatestResume,
+    enabled: Boolean(token),
+    retry: false,
+  });
+
   useEffect(() => {
     if (profileQuery.data) {
       setUser(profileQuery.data);
     }
   }, [profileQuery.data, setUser]);
+
+  useEffect(() => {
+    if (resumeQuery.data === undefined) {
+      return;
+    }
+
+    if (resumeQuery.data) {
+      setLatestResume(resumeQuery.data);
+    } else {
+      setLatestResume(undefined);
+    }
+  }, [resumeQuery.data, setLatestResume]);
+
+  useEffect(() => {
+    if (resumeQuery.error) {
+      console.error("Failed to fetch latest resume", resumeQuery.error);
+    }
+  }, [resumeQuery.error]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

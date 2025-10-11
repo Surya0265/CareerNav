@@ -7,12 +7,16 @@ export interface ResumePreferences {
 export interface ExtractedInfo {
   text_length?: number;
   email?: string | null;
-  phone?: string | null;
+  name?: string | null;
+  full_name?: string | null;
   detected_skills?: string[];
   skills_by_category?: Record<string, string[]>;
   total_skills_found?: number;
   has_experience_keywords?: boolean;
   has_education_keywords?: boolean;
+  experience_entries?: string[];
+  project_entries?: string[];
+  experience_keywords?: string[];
 }
 
 export interface AiInsights {
