@@ -302,11 +302,15 @@ def get_career_recommendations():
     experience_level = data.get('experience_level', 'intermediate')
     
     try:
+        print(f"Received request - Skills: {skills_by_category}, Preferences: {preferences}")
+        
         recommendations = gemini_service.generate_career_recommendations(
             skills_by_category=skills_by_category,
             preferences=preferences,
             experience_level=experience_level
         )
+        
+        print(f"Generated recommendations successfully")
         
         return jsonify({
             'success': True,
@@ -314,6 +318,9 @@ def get_career_recommendations():
         })
         
     except Exception as e:
+        print(f"ERROR in career recommendations: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Error generating recommendations: {str(e)}'}), 500
 
 @app.route('/ai/skill-analysis', methods=['POST'])

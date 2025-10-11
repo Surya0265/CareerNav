@@ -321,9 +321,12 @@ Generate a learning path in this JSON format
         
         formatted = []
         for category, skills in skills_by_category.items():
-            formatted.append(f"{category}: {', '.join(skills)}")
+            # Filter out None values and empty strings
+            valid_skills = [str(s) for s in skills if s is not None and s != '']
+            if valid_skills:
+                formatted.append(f"{category}: {', '.join(valid_skills)}")
         
-        return "; ".join(formatted)
+        return "; ".join(formatted) if formatted else "No valid skills detected"
     
     def _parse_career_response(self, response_text: str) -> Dict[str, Any]:
         """Parse career recommendation response"""
