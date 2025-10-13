@@ -1,6 +1,98 @@
 const User = require('../models/User');
 const { hashPassword, matchPassword, generateToken } = require('../utils/auth/authUtils');
 
+const SKILL_LEVEL_MAP = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+  expert: 'Expert'
+};
+
+const normalizeSkillType = (type) => {
+  if (!type) return null;
+  const lower = type.toString().toLowerCase();
+  if (lower === 'technical') return 'technical';
+  if (lower === 'soft') return 'soft';
+  return null;
+};
+
+const formatLevelForStorage = (level) => {
+  if (!level) return SKILL_LEVEL_MAP.intermediate;
+  const mapped = SKILL_LEVEL_MAP[level.toString().toLowerCase()];
+  return mapped || SKILL_LEVEL_MAP.intermediate;
+};
+
+const normalizeLevelForResponse = (level) => {
+  if (!level) return 'intermediate';
+  const lower = level.toString().toLowerCase();
+  if (lower in SKILL_LEVEL_MAP) return lower;
+  // handle capitalized values from legacy data
+  const matchedKey = Object.keys(SKILL_LEVEL_MAP).find(
+    (key) => SKILL_LEVEL_MAP[key] === level
+  );
+  return matchedKey || 'intermediate';
+};
+
+const ensureSkillBuckets = (user) => {
+  let mutated = false;
+
+  if (!user.skills) {
+    user.skills = { technical: [], soft: [] };
+    mutated = true;
+  } else if (Array.isArray(user.skills)) {
+    const technical = [];
+    const soft = [];
+
+    user.skills.forEach((skill = {}) => {
+      if (!skill || !skill.name) return;
+      const type = normalizeSkillType(skill.type) ||
+        (skill.category && skill.category.toString().toLowerCase().includes('soft') ? 'soft' : 'technical');
+
+      const formatted = {
+        name: skill.name,
+        level: formatLevelForStorage(skill.level),
+        verified: Boolean(skill.verified),
+        category: skill.category || undefined,
+        _id: skill._id
+      };
+
+      if (type === 'soft') {
+        soft.push(formatted);
+      } else {
+        technical.push(formatted);
+      }
+    });
+
+    user.skills = { technical, soft };
+    mutated = true;
+  } else {
+    const skillsObject = user.skills;
+    if (!Array.isArray(skillsObject.technical)) {
+      skillsObject.technical = [];
+      mutated = true;
+    }
+    if (!Array.isArray(skillsObject.soft)) {
+      skillsObject.soft = [];
+      mutated = true;
+    }
+  }
+
+  if (mutated && typeof user.markModified === 'function') {
+    user.markModified('skills');
+  }
+
+  return mutated;
+};
+
+const mapSkillForResponse = (skill, type) => ({
+  _id: skill._id,
+  name: skill.name,
+  level: normalizeLevelForResponse(skill.level),
+  verified: Boolean(skill.verified),
+  type,
+  category: skill.category || null
+});
+
 /**
  * @desc    Register a new user
  * @route   POST /api/users/signup
@@ -355,10 +447,21 @@ const getUserSkills = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+    const mutated = ensureSkillBuckets(user);
+    if (mutated) {
+      await user.save();
+    }
+
+    const technicalSkills = (user.skills.technical || []).map((skill) =>
+      mapSkillForResponse(skill, 'technical')
+    );
+    const softSkills = (user.skills.soft || []).map((skill) =>
+      mapSkillForResponse(skill, 'soft')
+    );
 
     res.json({
-      technical: user.skills?.technical || [],
-      soft: user.skills?.soft || []
+      technical: technicalSkills,
+      soft: softSkills
     });
   } catch (error) {
     console.error('Error in getUserSkills:', error);
@@ -374,47 +477,46 @@ const getUserSkills = async (req, res) => {
 const addUserSkill = async (req, res) => {
   try {
     const { name, level, type } = req.body;
+    const skillType = normalizeSkillType(type);
 
-    if (!name || !type || !['technical', 'soft'].includes(type)) {
-      return res.status(400).json({ 
-        error: 'Please provide a skill name and valid type (technical or soft)' 
+    if (!name || !skillType) {
+      return res.status(400).json({
+        error: 'Please provide a skill name and valid type (technical or soft)'
       });
     }
-    
-    const skillLevel = level || 'intermediate';
+
     const user = await User.findById(req.user._id);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Initialize skills array if not exists
-    if (!user.skills) {
-      user.skills = { technical: [], soft: [] };
-    }
-    
-    // Check if skill already exists
-    const skillExists = user.skills[type].find(
-      skill => skill.name.toLowerCase() === name.toLowerCase()
+
+    ensureSkillBuckets(user);
+
+    const duplicateExists = [...user.skills.technical, ...user.skills.soft].some(
+      (skill) => skill.name.toLowerCase() === name.toLowerCase()
     );
-    
-    if (skillExists) {
+
+    if (duplicateExists) {
       return res.status(400).json({ error: 'Skill already exists' });
     }
-    
-    // Add new skill
-    const newSkill = { 
-      name, 
-      level: skillLevel,
-      verified: false
+
+    const newSkill = {
+      name: name.trim(),
+      level: formatLevelForStorage(level),
+      verified: false,
+      category: skillType === 'soft' ? 'Soft' : 'Technical'
     };
-    
-    user.skills[type].push(newSkill);
+
+    user.skills[skillType].push(newSkill);
+    user.markModified('skills');
     await user.save();
-    
+
+    const createdSkill = user.skills[skillType][user.skills[skillType].length - 1];
+
     res.status(201).json({
       message: 'Skill added successfully',
-      skill: newSkill
+      skill: mapSkillForResponse(createdSkill, skillType)
     });
   } catch (error) {
     console.error('Error in addUserSkill:', error);
@@ -431,37 +533,72 @@ const updateUserSkill = async (req, res) => {
   try {
     const { skillId } = req.params;
     const { name, level, type } = req.body;
-    
-    if (!type || !['technical', 'soft'].includes(type)) {
-      return res.status(400).json({ 
-        error: 'Please provide a valid skill type (technical or soft)' 
-      });
-    }
-    
+    const requestedType = normalizeSkillType(type);
+
     const user = await User.findById(req.user._id);
-    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Find the skill to update
-    const skillIndex = user.skills[type].findIndex(
-      skill => skill._id.toString() === skillId
-    );
-    
+
+    ensureSkillBuckets(user);
+
+    const findSkillIndex = (bucket) =>
+      user.skills[bucket].findIndex((skill) => skill._id.toString() === skillId);
+
+    let currentType = requestedType || null;
+    let skillIndex = currentType ? findSkillIndex(currentType) : -1;
+
     if (skillIndex === -1) {
+      const technicalIndex = findSkillIndex('technical');
+      const softIndex = findSkillIndex('soft');
+
+      if (technicalIndex !== -1) {
+        currentType = 'technical';
+        skillIndex = technicalIndex;
+      } else if (softIndex !== -1) {
+        currentType = 'soft';
+        skillIndex = softIndex;
+      }
+    }
+
+    if (skillIndex === -1 || !currentType) {
       return res.status(404).json({ error: 'Skill not found' });
     }
-    
-    // Update skill
-    if (name) user.skills[type][skillIndex].name = name;
-    if (level) user.skills[type][skillIndex].level = level;
-    
+
+    const skillDoc = user.skills[currentType][skillIndex];
+
+    if (name) {
+      skillDoc.name = name.trim();
+    }
+    if (level) {
+      skillDoc.level = formatLevelForStorage(level);
+    }
+
+    let targetType = currentType;
+
+    if (requestedType && requestedType !== currentType) {
+      const updatedSkill = skillDoc.toObject ? skillDoc.toObject() : { ...skillDoc };
+      updatedSkill.level = skillDoc.level;
+      updatedSkill.name = skillDoc.name;
+      if (updatedSkill._id?.toString() !== skillId) {
+        updatedSkill._id = skillId;
+      }
+
+      user.skills[currentType].splice(skillIndex, 1);
+      user.skills[requestedType].push(updatedSkill);
+      targetType = requestedType;
+    }
+
+    user.markModified('skills');
     await user.save();
-    
+
+    const updatedSkillDoc = user.skills[targetType].find(
+      (skill) => skill._id.toString() === skillId
+    );
+
     res.json({
       message: 'Skill updated successfully',
-      skill: user.skills[type][skillIndex]
+      skill: mapSkillForResponse(updatedSkillDoc || skillDoc, targetType)
     });
   } catch (error) {
     console.error('Error in updateUserSkill:', error);
@@ -478,31 +615,41 @@ const deleteUserSkill = async (req, res) => {
   try {
     const { skillId } = req.params;
     const { type } = req.query;
-    
-    if (!type || !['technical', 'soft'].includes(type)) {
-      return res.status(400).json({ 
-        error: 'Please provide a valid skill type (technical or soft)' 
-      });
-    }
-    
+    const requestedType = normalizeSkillType(type);
+
     const user = await User.findById(req.user._id);
-    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Find and remove the skill
-    const skillIndex = user.skills[type].findIndex(
-      skill => skill._id.toString() === skillId
-    );
-    
-    if (skillIndex === -1) {
+
+    ensureSkillBuckets(user);
+
+    const removeFromBucket = (bucket) => {
+      const index = user.skills[bucket].findIndex(
+        (skill) => skill._id.toString() === skillId
+      );
+      if (index !== -1) {
+        user.skills[bucket].splice(index, 1);
+        return true;
+      }
+      return false;
+    };
+
+    let removed = false;
+
+    if (requestedType) {
+      removed = removeFromBucket(requestedType);
+    } else {
+      removed = removeFromBucket('technical') || removeFromBucket('soft');
+    }
+
+    if (!removed) {
       return res.status(404).json({ error: 'Skill not found' });
     }
-    
-    user.skills[type].splice(skillIndex, 1);
+
+    user.markModified('skills');
     await user.save();
-    
+
     res.json({ message: 'Skill removed successfully' });
   } catch (error) {
     console.error('Error in deleteUserSkill:', error);
@@ -528,26 +675,23 @@ const addUserSkillsBatch = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Initialize skills array if not exists
-    if (!user.skills) {
-      user.skills = { technical: [], soft: [] };
-    }
-    
+    ensureSkillBuckets(user);
+
     const addedSkills = [];
     const existingSkills = [];
     
     // Process each skill
     for (const skill of skills) {
-      const { name, level = 'intermediate', type = 'technical' } = skill;
-      
-      if (!name || !['technical', 'soft'].includes(type)) {
+      const { name, level = 'intermediate', type = 'technical', verified = true } = skill;
+      const normalizedType = normalizeSkillType(type) || 'technical';
+
+      if (!name) {
         continue; // Skip invalid skills
       }
-      
+
       // Check if skill already exists
-      const skillExists = user.skills[type].find(
-        s => s.name.toLowerCase() === name.toLowerCase()
+      const skillExists = [...user.skills.technical, ...user.skills.soft].find(
+        (s) => s.name.toLowerCase() === name.toLowerCase()
       );
       
       if (skillExists) {
@@ -557,15 +701,17 @@ const addUserSkillsBatch = async (req, res) => {
       
       // Add new skill
       const newSkill = { 
-        name, 
-        level,
-        verified: true // Verified because it came from resume
+        name: name.trim(), 
+        level: formatLevelForStorage(level),
+        verified: Boolean(verified)
       };
       
-      user.skills[type].push(newSkill);
-      addedSkills.push(newSkill);
+      user.skills[normalizedType].push(newSkill);
+      const storedSkill = user.skills[normalizedType][user.skills[normalizedType].length - 1];
+      addedSkills.push(mapSkillForResponse(storedSkill, normalizedType));
     }
     
+    user.markModified('skills');
     await user.save();
     
     res.status(201).json({

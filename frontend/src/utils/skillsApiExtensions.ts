@@ -1,7 +1,7 @@
-import React from 'react';
 import { getUserFromStorage } from './api';
 
-const API_BASE_URL = 'http://127.0.0.1:5000'; // Python backend URL
+const PYTHON_API_BASE_URL = 'http://127.0.0.1:5000';
+const NODE_API_BASE_URL = 'http://localhost:3000/api';
 
 /**
  * Extract skills from a resume file
@@ -20,7 +20,7 @@ export async function extractSkillsFromResume(file: File) {
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
     
     try {
-      const response = await fetch(`${API_BASE_URL}/extract-skills`, {
+  const response = await fetch(`${PYTHON_API_BASE_URL}/extract-skills`, {
         method: 'POST',
         body: formData,
         signal: controller.signal
@@ -76,18 +76,22 @@ export async function saveExtractedSkills(skills: Array<{
       throw new Error('Authentication required. Please log in.');
     }
     
-    const response = await fetch(`http://localhost:3000/api/skills/extract`, {
+    const selectedSkills = skills
+      .filter(skill => skill.selected)
+      .map(skill => ({
+        name: skill.name,
+        level: (skill.level || 'intermediate').toLowerCase(),
+        type: skill.type?.toLowerCase() === 'soft' ? 'soft' : 'technical',
+        verified: true
+      }));
+
+    const response = await fetch(`${NODE_API_BASE_URL}/users/skills/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${userInfo.token}`
       },
-      body: JSON.stringify({ skills: skills.filter(skill => skill.selected).map(skill => ({
-        ...skill,
-        level: 'Intermediate',
-        verified: true,
-        category: skill.type === 'soft' ? 'Soft Skill' : 'Technical'
-      })) })
+      body: JSON.stringify({ skills: selectedSkills })
     });
 
     if (!response.ok) {

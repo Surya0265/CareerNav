@@ -26,12 +26,10 @@ const UserSchema = new mongoose.Schema(
       minlength: 6,
       select: false, // Don't return password in query results
     },
-    skills: [{
-        name: String,
-        level: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'], default: 'Intermediate' },
-        verified: { type: Boolean, default: false },
-        category: { type: String, default: 'Other' }
-      }],
+    skills: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({ technical: [], soft: [] })
+    },
     preferences: {
       industries: [String],
       jobInterests: [String],
