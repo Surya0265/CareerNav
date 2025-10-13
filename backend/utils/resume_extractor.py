@@ -4,6 +4,66 @@ from docx import Document
 import os
 import re
 
+
+def _extract_section_entries(raw_text, section_keywords, stop_keywords):
+    """Extract bullet-style entries for resume sections like experience or projects."""
+    if not raw_text:
+        return []
+
+    lines = raw_text.splitlines()
+    section_keywords_lower = [keyword.lower() for keyword in section_keywords]
+    stop_keywords_lower = [keyword.lower() for keyword in stop_keywords]
+
+    capturing = False
+    buffer = []
+    entries = []
+
+    def flush_buffer():
+        if buffer:
+            combined = " ".join(buffer).strip()
+            if combined:
+                entries.append(combined)
+            buffer.clear()
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            if capturing:
+                flush_buffer()
+            continue
+
+        lower_line = line.lower()
+
+        # Detect start of section
+        if any(lower_line.startswith(keyword) for keyword in section_keywords_lower):
+            capturing = True
+            flush_buffer()
+            continue
+
+        if capturing and any(lower_line.startswith(keyword) for keyword in stop_keywords_lower):
+            flush_buffer()
+            break
+
+        if capturing:
+            # Normalize bullet points
+            if line[0] in {"-", "•", "*"}:
+                flush_buffer()
+                buffer.append(line.lstrip("-•* "))
+            else:
+                buffer.append(line)
+
+    flush_buffer()
+
+    # Remove duplicates while preserving order
+    seen = set()
+    deduped = []
+    for entry in entries:
+        if entry not in seen:
+            deduped.append(entry)
+            seen.add(entry)
+
+    return deduped
+
 def extract_text_from_pdf(file_path):
     """
     Extract text from PDF file using both PyPDF2 and pdfplumber for better coverage
@@ -294,7 +354,68 @@ def get_skills_summary(skills_list):
     
     return categorized
 
-def extract_basic_info(text):
+def _normalize_section_line(line):
+    # Remove bullet characters and extra symbols
+    cleaned = re.sub(r'^[\s•\-*–—\u2022\u2023\u25AA\u25CF\u25E6]+', '', line).strip()
+    return cleaned
+
+def _extract_section_entries(raw_text, section_headers, stop_headers):
+    if not raw_text:
+        return []
+
+    lines = raw_text.splitlines()
+    capture = False
+    entries = []
+    buffer = []
+
+    def flush_buffer():
+        merged = ' '.join(buffer).strip()
+        normalized = _normalize_section_line(merged)
+        if normalized:
+            entries.append(normalized)
+
+    lower_stop_headers = [header.lower() for header in stop_headers]
+    lower_section_headers = [header.lower() for header in section_headers]
+
+    for line in lines:
+        stripped = line.strip()
+        lower_line = stripped.lower()
+
+        if any(header in lower_line for header in lower_section_headers):
+            if capture and buffer:
+                flush_buffer()
+                buffer = []
+            capture = True
+            continue
+
+        if capture:
+            if any(lower_line.startswith(stop) for stop in lower_stop_headers):
+                break
+            if not stripped:
+                if buffer:
+                    flush_buffer()
+                    buffer = []
+            else:
+                buffer.append(stripped)
+
+    if capture and buffer:
+        flush_buffer()
+
+    # Deduplicate while preserving order and limit to avoid excessively long arrays
+    seen = set()
+    unique_entries = []
+    for entry in entries:
+        lowered = entry.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        unique_entries.append(entry)
+        if len(unique_entries) >= 12:
+            break
+
+    return unique_entries
+
+def extract_basic_info(text, raw_text=None):
     """
     Extract basic information from resume text using enhanced skill extraction
     """
@@ -304,7 +425,9 @@ def extract_basic_info(text):
         'skills': [],
         'skills_summary': {},
         'experience_keywords': [],
-        'education_keywords': []
+        'education_keywords': [],
+        'experience_entries': [],
+        'project_entries': []
     }
     
     if not text:
@@ -340,4 +463,20 @@ def extract_basic_info(text):
         if keyword in text_lower:
             info['education_keywords'].append(keyword)
     
+    raw_source = raw_text or text
+    stop_headers = [
+        'education', 'certifications', 'skills', 'projects', 'project experience',
+        'about', 'summary', 'objective', 'achievements', 'publications'
+    ]
+
+    experience_headers = [
+        'experience', 'work experience', 'professional experience', 'employment history'
+    ]
+    info['experience_entries'] = _extract_section_entries(raw_source, experience_headers, stop_headers)
+
+    project_headers = [
+        'projects', 'project experience', 'personal projects', 'notable projects', 'selected projects'
+    ]
+    info['project_entries'] = _extract_section_entries(raw_source, project_headers, stop_headers)
+
     return info

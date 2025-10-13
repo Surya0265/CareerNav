@@ -62,7 +62,7 @@ def process_resume():
         clean_text = clean_extracted_text(extracted_text)
         
         # Extract basic information
-        basic_info = extract_basic_info(clean_text)
+        basic_info = extract_basic_info(clean_text, extracted_text)
         
         print("Industries:", industries)
         print("Goals:", goals)
@@ -126,12 +126,14 @@ def process_resume():
             "extracted_info": {
                 "text_length": len(clean_text),
                 "email": basic_info.get('email'),
-                "phone": basic_info.get('phone'),
                 "detected_skills": basic_info.get('skills', []),
                 "skills_by_category": basic_info.get('skills_summary', {}),
                 "total_skills_found": len(basic_info.get('skills', [])),
                 "has_experience_keywords": len(basic_info.get('experience_keywords', [])) > 0,
-                "has_education_keywords": len(basic_info.get('education_keywords', [])) > 0
+                "has_education_keywords": len(basic_info.get('education_keywords', [])) > 0,
+                "experience_entries": basic_info.get('experience_entries', []),
+                "project_entries": basic_info.get('project_entries', []),
+                "experience_keywords": basic_info.get('experience_keywords', [])
             },
             "preferences": {
                 "industries": industries,
@@ -181,7 +183,7 @@ def extract_skills():
         clean_text = clean_extracted_text(extracted_text)
         
         # Extract basic information
-        basic_info = extract_basic_info(clean_text)
+        basic_info = extract_basic_info(clean_text, extracted_text)
         
         # Create a response with just the extracted skills
         response = {
@@ -190,7 +192,6 @@ def extract_skills():
             'total_skills_found': len(basic_info.get('skills', [])),
             'extracted_info': {
                 'email': basic_info.get('email', ''),
-                'phone': basic_info.get('phone_number', ''),
                 'detected_skills': basic_info.get('skills', []),
             }
         }
@@ -239,9 +240,9 @@ def extract_resume():
         
         # Clean the extracted text
         clean_text = clean_extracted_text(extracted_text)
-        
+
         # Extract basic information
-        basic_info = extract_basic_info(clean_text)
+        basic_info = extract_basic_info(clean_text, extracted_text)
         
         response = {
             "success": True,
@@ -254,7 +255,6 @@ def extract_resume():
                 "full_text": clean_text,
                 "basic_info": {
                     "email": basic_info.get('email'),
-                    "phone": basic_info.get('phone'),
                     "skills": basic_info.get('skills', []),
                     "skills_by_category": basic_info.get('skills_summary', {}),
                     "experience_keywords": basic_info.get('experience_keywords', []),
@@ -262,7 +262,7 @@ def extract_resume():
                 }
             },
             "analysis": {
-                "has_contact_info": bool(basic_info.get('email') or basic_info.get('phone')),
+                "has_contact_info": bool(basic_info.get('email')),
                 "skills_detected": len(basic_info.get('skills', [])),
                 "appears_complete": len(clean_text) > 200,
                 "top_skill_categories": list(basic_info.get('skills_summary', {}).keys())[:3],
@@ -302,11 +302,15 @@ def get_career_recommendations():
     experience_level = data.get('experience_level', 'intermediate')
     
     try:
+        print(f"Received request - Skills: {skills_by_category}, Preferences: {preferences}")
+        
         recommendations = gemini_service.generate_career_recommendations(
             skills_by_category=skills_by_category,
             preferences=preferences,
             experience_level=experience_level
         )
+        
+        print(f"Generated recommendations successfully")
         
         return jsonify({
             'success': True,
@@ -314,6 +318,9 @@ def get_career_recommendations():
         })
         
     except Exception as e:
+        print(f"ERROR in career recommendations: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Error generating recommendations: {str(e)}'}), 500
 
 @app.route('/ai/skill-analysis', methods=['POST'])

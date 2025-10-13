@@ -4,3 +4,4 @@ backend/node_modules
 .env
 backend/uploads
 backend/utils/__pycache__
+backend.log

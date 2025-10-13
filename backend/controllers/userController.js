@@ -195,6 +195,7 @@ const registerUser = async (req, res) => {
  */
 const loginUser = async (req, res) => {
   try {
+    console.log('Received POST /api/users/login request');
     const { email, password } = req.body;
 
     // Find user by email

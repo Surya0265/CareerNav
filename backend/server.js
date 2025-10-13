@@ -3,7 +3,15 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const colors = require('colors');
 const connectDB = require('./config/db');
-
+const app = express();
+app.use(cors({
+  origin: 'http://localhost:5173', // allow Vite frontend
+  credentials: true
+}));
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
 // Load environment variables
 dotenv.config();
 
@@ -22,11 +30,7 @@ const timelineRoutes = require('./routes/timelineRoutes');
 const userRoutes = require('./routes/userRoutes');
 
 
-const app = express();
-app.use(cors({
-  origin: 'http://localhost:5173', // allow Vite frontend
-  credentials: true
-}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -84,5 +88,10 @@ app.use('/api/skills', skillsRoutes);
 const aiRoutes = require('./routes/aiRoutes');
 app.use('/api/ai', aiRoutes);
 
-const PORT = process.env.PORT || 3000;
+app.use((req, res) => {
+  console.warn(`No route matched for ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: 'Not Found' });
+});
+
+const PORT = process.env.PORT || 3011;
 app.listen(PORT, () => console.log(`Backend running on port http://localhost:${PORT}`));

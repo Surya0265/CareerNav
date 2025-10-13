@@ -7,6 +7,22 @@ const ResumeSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    summary: {
+      type: String,
+    },
+    preferences: {
+      industries: [String],
+      goals: String,
+      location: String,
+    },
+    extractedInfo: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    aiInsights: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     fileInfo: {
       path: {
         type: String,

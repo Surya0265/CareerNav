@@ -154,13 +154,27 @@ router.post('/analyze-resume', protect, upload.single('resume'), async (req, res
       if (!user.skills) {
         user.skills = { technical: [], soft: [] };
       }
+      
+      // Ensure both arrays exist
+      if (!user.skills.technical) {
+        user.skills.technical = [];
+      }
+      if (!user.skills.soft) {
+        user.skills.soft = [];
+      }
 
       // Add extracted skills (avoid duplicates)
       const addedSkills = [];
       extractedSkills.forEach(skill => {
         const skillType = skill.category === 'soft' ? 'soft' : 'technical';
+        
+        // Ensure the array exists before using .find()
+        if (!Array.isArray(user.skills[skillType])) {
+          user.skills[skillType] = [];
+        }
+        
         const exists = user.skills[skillType].find(
-          s => s.name.toLowerCase() === skill.name.toLowerCase()
+          s => s && s.name && s.name.toLowerCase() === skill.name.toLowerCase()
         );
         
         if (!exists) {
@@ -176,10 +190,14 @@ router.post('/analyze-resume', protect, upload.single('resume'), async (req, res
 
       await user.save();
 
-      // Step 3: Format skills for AI analysis
+      // Step 3: Format skills for AI analysis (filter out null/undefined)
       const skillsByCategory = {
-        technical: user.skills.technical.map(s => s.name),
-        soft: user.skills.soft.map(s => s.name)
+        technical: user.skills.technical
+          .filter(s => s && s.name)
+          .map(s => s.name),
+        soft: user.skills.soft
+          .filter(s => s && s.name)
+          .map(s => s.name)
       };
 
       const preferences = {
@@ -189,6 +207,8 @@ router.post('/analyze-resume', protect, upload.single('resume'), async (req, res
       };
 
       // Step 4: Call AI analysis service
+      console.log('Calling Flask AI service with:', { skillsByCategory, preferences, experienceLevel });
+      
       const aiAnalysisResponse = await fetch('http://127.0.0.1:5000/ai/career-recommendations', {
         method: 'POST',
         headers: {
@@ -202,8 +222,12 @@ router.post('/analyze-resume', protect, upload.single('resume'), async (req, res
         })
       });
 
+      console.log('Flask response status:', aiAnalysisResponse.status);
+      
       if (!aiAnalysisResponse.ok) {
-        throw new Error('AI analysis service unavailable');
+        const errorText = await aiAnalysisResponse.text();
+        console.log('Flask error response:', errorText);
+        throw new Error(`AI analysis service unavailable: ${errorText}`);
       }
 
       const aiAnalysis = await aiAnalysisResponse.json();
