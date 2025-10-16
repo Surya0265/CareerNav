@@ -8,6 +8,7 @@ import { ResumeUploadPage } from "../pages/ResumeUpload.tsx";
 import { AnalysisPage } from "../pages/Analysis.tsx";
 import { TimelinePage } from "../pages/Timeline.tsx";
 import { JobRecommendationsPage } from "../pages/JobRecommendations.tsx";
+import { YouTubeRecommendationsPage } from "../pages/YouTubeRecommendations.tsx";
 import { LoginPage } from "../pages/Login.tsx";
 import { SignupPage } from "../pages/Signup.tsx";
 import type { ReactElement } from "react";
@@ -56,6 +57,7 @@ const AppRouter = () => (
       <Route path="analysis" element={<AnalysisPage />} />
       <Route path="timeline" element={<TimelinePage />} />
       <Route path="jobs" element={<JobRecommendationsPage />} />
+      <Route path="youtube" element={<YouTubeRecommendationsPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>

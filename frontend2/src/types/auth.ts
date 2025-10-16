@@ -17,11 +17,19 @@ export interface AccountSettings {
   theme?: "light" | "dark" | "system" | string;
 }
 
+export interface Skill {
+  name: string;
+  level?: string;
+  verified?: boolean;
+  category?: string;
+}
+
 export interface User {
   _id: string;
   name: string;
   email: string;
   avatar?: string;
+  skills?: Skill[];
   preferences?: Preferences;
   accountSettings?: AccountSettings;
 }

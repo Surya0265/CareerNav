@@ -131,28 +131,38 @@ exports.getJobsByUploadedResume = async (req, res) => {
     const skills = extractResponse.data?.extracted_content?.basic_info?.skills || [];
     const skillsByCategory = extractResponse.data?.extracted_content?.skills_by_category || {};
     
+    // Convert skills to the correct format: array of objects with name, level, category
+    const formattedSkills = Array.isArray(skills) 
+      ? skills.map(skill => ({
+          name: typeof skill === 'string' ? skill : skill.name || skill,
+          level: skill.level || 'Intermediate',
+          verified: false,
+          category: skill.category || skillsByCategory[skill] || 'Technical'
+        }))
+      : [];
+    
     // Save skills to authenticated user if available
     if (req.user && req.user._id) {
       await User.findByIdAndUpdate(req.user._id, {
-        skills: {
-          technical: skills,
-          categories: skillsByCategory
-        }
+        skills: formattedSkills
       });
       
       // Also save to Resume if it exists
       const userResume = await Resume.findOne({ userId: req.user._id });
       if (userResume) {
-        userResume.skills = skills.map(skill => ({ name: skill }));
+        userResume.skills = formattedSkills;
         await userResume.save();
       }
     }
     
+    // Extract skill names for job search
+    const skillNames = formattedSkills.map(skill => skill.name);
+    
     // Fetch jobs based on extracted skills
-    const allJobs = await extractJobsForSkills(skills, city, country);
+    const allJobs = await extractJobsForSkills(skillNames, city, country);
     
     res.json({ 
-      skills, 
+      skills: skillNames, 
       jobs: allJobs,
       message: allJobs.length === 0 ? 'No jobs found for your profile/location.' : 'Jobs found successfully'
     });
@@ -196,19 +206,15 @@ exports.getJobsByExistingSkills = async (req, res) => {
     
     console.log('User skills:', user.skills);
     
-    if (!user.skills || !user.skills.technical) {
+    if (!user.skills || !Array.isArray(user.skills) || user.skills.length === 0) {
       return res.status(400).json({ 
         error: 'No skills found. Please upload your resume first.' 
       });
     }
     
-    const skills = user.skills.technical;
-    
-    if (!Array.isArray(skills) || skills.length === 0) {
-      return res.status(400).json({ 
-        error: 'No skills found in your profile. Please upload your resume first.' 
-      });
-    }
+    // Extract skill names from the skills array
+    // Skills are stored as: [{ name: "CSS", level: "...", verified: true, category: "..." }, ...]
+    const skills = user.skills.map(skill => skill.name || skill);
     
     console.log(`Fetching jobs for user ${req.user._id} with skills: ${skills.join(', ')}`);
     

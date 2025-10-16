@@ -14,6 +14,7 @@ const navLinks = [
   { to: "/analysis", label: "AI Analysis", icon: "🧠" },
   { to: "/timeline", label: "Career Timeline", icon: "🗓️" },
   { to: "/jobs", label: "Job Recommendations", icon: "💼" },
+  { to: "/youtube", label: "YouTube Learning", icon: "▶️" },
 ];
 
 export const AppLayout = () => {
