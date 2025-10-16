@@ -125,6 +125,10 @@ exports.handleResumeUpload = async (req, res) => {
     console.log("FILE:", req.file);
     console.log("Saved file path:", req.file.path);
 
+    // Read file into buffer
+    const fs = require('fs');
+    const fileData = fs.readFileSync(resumePath);
+    
     // Get dynamic data from frontend
     const industries = JSON.parse(req.body.industries || '[]');
     const goals = req.body.goals || '';
@@ -172,11 +176,14 @@ exports.handleResumeUpload = async (req, res) => {
       extractedInfo: sanitizedExtractedInfo,
       aiInsights: result.ai_insights ?? {},
       fileInfo: {
-        path: resumePath,
         type: determineFileType(),
         originalName: req.file.originalname,
         size: req.file.size,
         uploadDate: new Date(),
+      },
+      fileData: {
+        data: fileData,
+        contentType: req.file.mimetype,
       },
     };
 
@@ -208,7 +215,15 @@ exports.handleResumeUpload = async (req, res) => {
     }
 
     result.extracted_info = responseExtractedInfo;
-   // fs.unlinkSync(resumePath); // Cleanup
+    
+    // Clean up temp file
+    try {
+      fs.unlinkSync(resumePath);
+      console.log('Temp resume file deleted:', resumePath);
+    } catch (err) {
+      console.warn('Could not delete temp file:', err.message);
+    }
+    
     res.json(result);
   } catch (error) {
     console.error('Resume processing error:', error.message);
@@ -225,15 +240,17 @@ async function saveSkillsToUser(userId, extractedSkills) {
     const technicalSkills = Array.isArray(extractedSkills.technical) ? 
       extractedSkills.technical.map(skill => ({
         name: skill,
-        level: 'intermediate',
-        verified: true
+        level: 'Intermediate',
+        verified: true,
+        category: 'Technical'
       })) : [];
     
     const softSkills = Array.isArray(extractedSkills.soft) ? 
       extractedSkills.soft.map(skill => ({
         name: skill,
-        level: 'intermediate',
-        verified: true
+        level: 'Intermediate',
+        verified: true,
+        category: 'Soft'
       })) : [];
     
     // Find user and update skills directly
@@ -244,21 +261,24 @@ async function saveSkillsToUser(userId, extractedSkills) {
       return false;
     }
     
-    // Initialize skills object if it doesn't exist
-    if (!user.skills) {
-      user.skills = { technical: [], soft: [] };
+    // Initialize skills array if it doesn't exist
+    if (!Array.isArray(user.skills)) {
+      user.skills = [];
+    } else {
+      // Clean up any invalid skills (with undefined names)
+      user.skills = user.skills.filter(s => s && s.name);
     }
     
     // Add new skills, avoiding duplicates
     for (const skill of technicalSkills) {
-      if (!user.skills.technical.some(s => s.name.toLowerCase() === skill.name.toLowerCase())) {
-        user.skills.technical.push(skill);
+      if (!user.skills.some(s => s.name.toLowerCase() === skill.name.toLowerCase())) {
+        user.skills.push(skill);
       }
     }
     
     for (const skill of softSkills) {
-      if (!user.skills.soft.some(s => s.name.toLowerCase() === skill.name.toLowerCase())) {
-        user.skills.soft.push(skill);
+      if (!user.skills.some(s => s.name.toLowerCase() === skill.name.toLowerCase())) {
+        user.skills.push(skill);
       }
     }
     
@@ -308,17 +328,26 @@ exports.getLatestResume = async (req, res) => {
 
 exports.finalizeResume = async (req, res) => {
   try {
+    console.log('Finalize resume called for user:', req.user._id);
     const { personalInfo = {}, preferences = {}, sections = {} } = req.body;
+    console.log('Request body:', { personalInfo, preferences, sections });
 
     const resume = await Resume.findOne({ userId: req.user._id }).sort({ updatedAt: -1 });
 
     if (!resume) {
+      console.log('No resume found for user:', req.user._id);
       return res.status(404).json({ error: 'Resume not found' });
     }
 
-    if (!resume.fileInfo?.path) {
-      return res.status(400).json({ error: 'Resume file is missing. Please upload again.' });
+    console.log('Resume found:', resume._id, 'File path:', resume.fileInfo?.path);
+
+    // Check if file data exists in MongoDB
+    if (!resume.fileData || !resume.fileData.data) {
+      console.log('No file data in MongoDB');
+      return res.status(400).json({ error: 'Resume file not found in database. Please upload your resume again.' });
     }
+
+    console.log('File data found in MongoDB, size:', resume.fileData.data.length);
 
     const normalizedPreferences = {
       industries: Array.isArray(preferences.industries)
@@ -345,17 +374,44 @@ exports.finalizeResume = async (req, res) => {
     };
 
     const analysis = await sendToPythonLLM({
-      filePath: resume.fileInfo.path,
+      fileData: resume.fileData.data,
+      fileName: resume.fileInfo.originalName || 'resume.pdf',
       industries: normalizedPreferences.industries,
       goals: normalizedPreferences.goals,
       location: normalizedPreferences.location,
     });
 
-    if (req.user && req.user._id && analysis.skills) {
-      await saveSkillsToUser(req.user._id, analysis.skills);
+    console.log('Analysis response:', { 
+      hasExtractedInfo: !!analysis.extracted_info,
+      hasDetectedSkills: !!analysis.extracted_info?.detected_skills,
+      skillsCount: analysis.extracted_info?.detected_skills?.length || 0,
+      hasAiInsights: !!analysis.ai_insights,
+      aiInsightsKeys: analysis.ai_insights ? Object.keys(analysis.ai_insights) : [],
+      careerRecsCount: analysis.ai_insights?.career_recommendations?.recommended_roles?.length || 0
+    });
+
+    // Format skills for saveSkillsToUser function
+    if (req.user && req.user._id && analysis.extracted_info && analysis.extracted_info.detected_skills) {
+      const skillsByCategory = analysis.extracted_info.skills_by_category || {};
+      const formattedSkills = {
+        technical: skillsByCategory.technical_skills || skillsByCategory.technical || analysis.extracted_info.detected_skills,
+        soft: skillsByCategory.soft_skills || skillsByCategory.soft || []
+      };
+      console.log('Saving formatted skills:', { 
+        technicalCount: formattedSkills.technical?.length || 0,
+        softCount: formattedSkills.soft?.length || 0 
+      });
+      await saveSkillsToUser(req.user._id, formattedSkills);
     }
 
     const sanitizedAnalysisInfo = sanitizeExtractedInfo(analysis.extracted_info);
+
+    console.log('Sanitized analysis info:', {
+      hasDetectedSkills: !!sanitizedAnalysisInfo.detected_skills,
+      detectedSkillsCount: sanitizedAnalysisInfo.detected_skills?.length || 0,
+      hasExperienceEntries: !!sanitizedAnalysisInfo.experience_entries,
+      experienceEntriesCount: sanitizedAnalysisInfo.experience_entries?.length || 0
+    });
 
     if (sectionUpdates.technicalSkills.length) {
       sanitizedAnalysisInfo.detected_skills = sectionUpdates.technicalSkills;
@@ -394,9 +450,56 @@ exports.finalizeResume = async (req, res) => {
       ai_insights: resume.aiInsights ?? {},
     };
 
+    console.log('Finalize response being sent to frontend:', {
+      hasAiInsights: !!responsePayload.ai_insights,
+      aiInsightsKeys: Object.keys(responsePayload.ai_insights || {}),
+      careerRecsCount: responsePayload.ai_insights?.career_recommendations?.recommended_roles?.length || 0
+    });
+
     res.json(responsePayload);
   } catch (error) {
-    console.error('Error finalizing resume:', error);
-    res.status(500).json({ error: 'Failed to finalize resume' });
+    console.error('Error finalizing resume:', error.message || error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to finalize resume',
+      details: error.message || error,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+exports.deleteResume = async (req, res) => {
+  try {
+    const resume = await Resume.findOneAndDelete({ userId: req.user._id });
+
+    if (!resume) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    // File data is automatically deleted from MongoDB with the resume record
+    console.log('Resume deleted from database:', resume._id);
+
+    res.json({ message: 'Resume deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting resume:', error);
+    res.status(500).json({ error: 'Failed to delete resume' });
+  }
+};
+
+// Migration: Clean up old resume records without fileData
+exports.cleanupOldResumes = async (req, res) => {
+  try {
+    const result = await Resume.deleteMany({ 
+      fileData: { $exists: false } 
+    });
+    
+    console.log(`Cleaned up ${result.deletedCount} old resume records without fileData`);
+    res.json({ 
+      message: 'Cleanup completed',
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    console.error('Error cleaning up old resumes:', error);
+    res.status(500).json({ error: 'Cleanup failed' });
   }
 };

@@ -26,7 +26,6 @@ const ResumeSchema = new mongoose.Schema(
     fileInfo: {
       path: {
         type: String,
-        required: true,
       },
       type: {
         type: String,
@@ -39,6 +38,10 @@ const ResumeSchema = new mongoose.Schema(
         type: Date,
         default: Date.now,
       },
+    },
+    fileData: {
+      data: Buffer,
+      contentType: String,
     },
     personalInfo: {
       name: String,

@@ -50,11 +50,8 @@ def extract_skills():
         return jsonify({'error': f'Error extracting skills: {str(e)}'}), 500
     
     finally:
-        # Clean up - remove the uploaded file
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                print(f"Warning: Could not remove file {file_path}: {str(e)}")
+        # DON'T delete the file - let the Node backend manage file lifecycle
+        # The file will be cleaned up when the resume is deleted or replaced
+        pass
 
     return jsonify(response)
