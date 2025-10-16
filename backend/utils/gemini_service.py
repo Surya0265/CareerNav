@@ -19,21 +19,15 @@ class GeminiService:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
         
         genai.configure(api_key=self.api_key)
-        # Use the current Gemini model name (as of 2024/2025)
+        # Use gemini-2.0-flash model which is stable and widely available
+        # Fallback to gemini-pro-latest if needed
         try:
-            # Try the latest model first
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
-            print("Using Gemini 1.5 Flash model")
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            print("Using Gemini 2.0 Flash model")
         except Exception as e:
-            print(f"Failed to load gemini-1.5-flash: {e}")
-            try:
-                self.model = genai.GenerativeModel('gemini-1.5-pro')
-                print("Using Gemini 1.5 Pro model")
-            except Exception as e2:
-                print(f"Failed to load gemini-1.5-pro: {e2}")
-                # Final fallback
-                self.model = genai.GenerativeModel('gemini-pro')
-                print("Using Gemini Pro model")
+            print(f"Failed to load gemini-2.0-flash: {e}, falling back to gemini-pro-latest")
+            self.model = genai.GenerativeModel('gemini-pro-latest')
+            print("Using Gemini Pro Latest model")
     
     def generate_career_recommendations(self, 
                                       skills_by_category: Dict[str, List[str]], 

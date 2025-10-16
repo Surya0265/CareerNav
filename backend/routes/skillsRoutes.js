@@ -212,4 +212,29 @@ router.delete('/:skillId', protect, async (req, res) => {
   }
 });
 
+// @desc    Delete all user skills
+// @route   DELETE /api/skills
+// @access  Private
+router.delete('/', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Clear all skills
+    user.skills = [];
+    await user.save();
+
+    res.status(200).json({ 
+      message: 'All skills deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('Error deleting all skills:', error);
+    res.status(500).json({ error: 'Server error: ' + error.message });
+  }
+});
+
 module.exports = router;
