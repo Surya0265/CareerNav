@@ -7,14 +7,21 @@ import { cn } from "../../utils/cn.ts";
 import { useCareerData } from "../../app/providers/CareerDataContext.ts";
 import { fetchProfile } from "../../services/auth.ts";
 import { fetchLatestResume } from "../../services/resume.ts";
+import {
+  LayoutDashboard,
+  FileText,
+  BrainCircuit,
+  Calendar,
+} from "lucide-react";
 
 const navLinks = [
-  { to: "/", label: "Dashboard", icon: "🏠" },
-  { to: "/resume", label: "Resume Upload", icon: "📄" },
-  { to: "/analysis", label: "AI Analysis", icon: "🧠" },
-  { to: "/timeline", label: "Career Timeline", icon: "🗓️" },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/resume", label: "Resume Upload", icon: FileText },
+  { to: "/analysis", label: "AI Analysis", icon: BrainCircuit },
+  { to: "/timeline", label: "Career Timeline", icon: Calendar },
   { to: "/jobs", label: "Job Recommendations", icon: "💼" },
-  { to: "/youtube", label: "YouTube Learning", icon: "▶️" },
+  { to: "/youtube", label: "YouTube Learning", icon: "▶️" }
+  
 ];
 
 export const AppLayout = () => {
@@ -66,32 +73,39 @@ export const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-  <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full">
         <aside className="hidden w-64 flex-col border-r border-slate-800 bg-slate-950/80 p-6 md:flex">
           <div className="mb-8 space-y-1">
-            <p className="text-xs uppercase tracking-widest text-blue-400">CareerNav</p>
+            <p className="text-xs uppercase tracking-widest text-blue-400">
+              CareerNav
+            </p>
             <h1 className="text-xl font-semibold text-white">Growth Hub</h1>
-            <p className="text-xs text-slate-400">Plan, learn, and track your career journey.</p>
+            <p className="text-xs text-slate-400">
+              Plan, learn, and track your career journey.
+            </p>
           </div>
           <nav className="flex flex-1 flex-col gap-2">
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.to === "/"}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-xl px-4 py-2 text-sm transition",
-                    isActive
-                      ? "bg-blue-600/20 text-blue-100"
-                      : "text-slate-300 hover:bg-slate-800/60 hover:text-slate-100"
-                  )
-                }
-              >
-                <span className="text-lg">{link.icon}</span>
-                <span>{link.label}</span>
-              </NavLink>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === "/"}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-2 text-sm transition",
+                      isActive
+                        ? "bg-blue-600/20 text-blue-100"
+                        : "text-slate-300 hover:bg-slate-800/60 hover:text-slate-100"
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{link.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
         </aside>
 
@@ -99,15 +113,22 @@ export const AppLayout = () => {
           <header className="sticky top-0 z-40 flex flex-col gap-4 border-b border-slate-800 bg-slate-950/80 px-5 py-4 backdrop-blur">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-white">Hey {user?.name?.split(" ")[0] ?? "there"}</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  Hey{" "}
+                  {user?.name?.split(" ")[0] ?? "there"}
+                </h2>
                 <p className="text-xs text-slate-400">
                   You&apos;re just a few steps away from your next opportunity.
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="hidden text-right md:block">
-                  <p className="text-sm font-medium text-slate-100">{user?.name ?? ""}</p>
-                  <p className="text-xs text-slate-400">{user?.email ?? ""}</p>
+                  <p className="text-sm font-medium text-slate-100">
+                    {user?.name ?? ""}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {user?.email ?? ""}
+                  </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   Log out
@@ -116,24 +137,27 @@ export const AppLayout = () => {
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto md:hidden">
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.to === "/"}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-2 rounded-full px-4 py-2 text-xs",
-                      isActive
-                        ? "bg-blue-600/20 text-blue-100"
-                        : "border border-slate-800 text-slate-300"
-                    )
-                  }
-                >
-                  <span>{link.icon}</span>
-                  <span>{link.label}</span>
-                </NavLink>
-              ))}
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.to === "/"}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 rounded-full px-4 py-2 text-xs",
+                        isActive
+                          ? "bg-blue-600/20 text-blue-100"
+                          : "border border-slate-800 text-slate-300"
+                      )
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{link.label}</span>
+                  </NavLink>
+                );
+              })}
             </div>
           </header>
 
