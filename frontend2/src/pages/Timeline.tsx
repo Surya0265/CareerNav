@@ -37,6 +37,20 @@ export const TimelinePage = () => {
 
   const mutation = useMutation({
     mutationFn: async (): Promise<TimelineResponse> => {
+      // Include resume data (projects, experience, etc.) in the context
+      const additionalContext: Record<string, unknown> = {};
+      
+      if (context) {
+        additionalContext.notes = context;
+      }
+      
+      if (latestResume?.extracted_info) {
+        additionalContext.experience = latestResume.extracted_info.experience || [];
+        additionalContext.education = latestResume.extracted_info.education || [];
+        additionalContext.projects = latestResume.extracted_info.projects || [];
+        additionalContext.summary = latestResume.extracted_info.summary || "";
+      }
+      
       const payload: TimelineRequest = {
         current_skills: skillsInput
           .split(",")
@@ -44,11 +58,7 @@ export const TimelinePage = () => {
           .filter(Boolean),
         target_job: targetRole,
         timeframe_months: Number(timeframe) || defaultRequest.timeframe_months,
-        additional_context: context
-          ? {
-              notes: context,
-            }
-          : undefined,
+        additional_context: Object.keys(additionalContext).length > 0 ? additionalContext : undefined,
       };
 
       console.log('TimelinePage: Sending payload:', payload);
