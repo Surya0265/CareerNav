@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "../hooks/useAuth.ts";
+import { fetchProfile } from "../services/auth.ts";
 import { getJobRecommendations } from "../services/jobs.ts";
 import type { Job, JobRecommendationsResponse } from "../types/jobs.ts";
 import { Card, CardContent, CardHeader } from "../components/shared/Card.tsx";
@@ -14,6 +16,9 @@ import { cn } from "../utils/cn.ts";
 type SearchMode = "upload" | "existing" | null;
 
 export const JobRecommendationsPage = () => {
+  const { token, setUser } = useAuth();
+  const { push } = useToast();
+
   const [searchMode, setSearchMode] = useState<SearchMode>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [city, setCity] = useState("");
@@ -23,7 +28,19 @@ export const JobRecommendationsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [jobsData, setJobsData] = useState<JobRecommendationsResponse | null>(null);
 
-  const { push } = useToast();
+  // Fetch fresh user data to ensure skills are loaded
+  const { data: freshUser } = useQuery({
+    queryKey: ["profile"],
+    queryFn: fetchProfile,
+    enabled: Boolean(token),
+    retry: 1,
+  });
+
+  useEffect(() => {
+    if (freshUser) {
+      setUser(freshUser);
+    }
+  }, [freshUser, setUser]);
 
   const uploadMutation = useMutation({
     mutationFn: async () => {

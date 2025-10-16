@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAuth } from "../hooks/useAuth.ts";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useToast } from "../components/shared/ToastContext.ts";
 import { Card, CardContent, CardHeader } from "../components/shared/Card.tsx";
 import { Button } from "../components/shared/Button.tsx";
 import { Input } from "../components/shared/Input.tsx";
 import { FormField } from "../components/shared/FormField.tsx";
 import { Spinner } from "../components/shared/Spinner.tsx";
-import { fetchProfile } from "../services/auth.ts";
 import {
   getYouTubeRecommendations,
   type YouTubeRecommendationsResponse,
@@ -16,43 +14,33 @@ import {
 } from "../services/youtube.ts";
 
 export const YouTubeRecommendationsPage = () => {
-  const { user: authUser, token, setUser } = useAuth();
   const { push } = useToast();
 
+  const [skillsInput, setSkillsInput] = useState("");
   const [targetJob, setTargetJob] = useState("");
   const [timeframeMonths, setTimeframeMonths] = useState("6");
   const [recommendations, setRecommendations] =
     useState<YouTubeRecommendationsResponse | null>(null);
 
-  // Fetch fresh user data to ensure skills are loaded
-  const { data: freshUser } = useQuery({
-    queryKey: ["profile"],
-    queryFn: fetchProfile,
-    enabled: Boolean(token),
-  });
-
-  // Use fresh user data if available, otherwise use auth user
-  const user = freshUser || authUser;
-
-  useEffect(() => {
-    if (freshUser) {
-      setUser(freshUser);
-    }
-  }, [freshUser, setUser]);
-
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!user?.skills || user.skills.length === 0) {
-        throw new Error("Please upload your resume first to extract skills");
+      if (!skillsInput.trim()) {
+        throw new Error("Please enter your skills (comma-separated)");
       }
 
       if (!targetJob.trim()) {
         throw new Error("Please enter your target job role");
       }
 
-      const skillNames = user.skills.map((skill) =>
-        typeof skill === "string" ? skill : skill.name
-      );
+      // Parse skills from comma-separated input
+      const skillNames = skillsInput
+        .split(",")
+        .map((skill) => skill.trim())
+        .filter((skill) => skill.length > 0);
+
+      if (skillNames.length === 0) {
+        throw new Error("Please enter at least one skill");
+      }
 
       return getYouTubeRecommendations({
         current_skills: skillNames,
@@ -97,73 +85,62 @@ export const YouTubeRecommendationsPage = () => {
           </p>
         </div>
 
-        {!user?.skills || user.skills.length === 0 ? (
-          <Card>
-            <CardHeader title="No Skills Found" />
-            <CardContent>
-              <p className="text-slate-300 mb-4">
-                Please upload your resume first to extract your skills.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader title="Career Goal" />
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <FormField label="Your Current Skills">
-                  <div className="flex flex-wrap gap-2">
-                    {(user.skills || []).map((skill, idx: number) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-blue-900/50 text-blue-200 rounded-full text-sm"
-                      >
-                        {typeof skill === "string" ? skill : skill.name}
-                      </span>
-                    ))}
-                  </div>
-                </FormField>
+        <Card>
+          <CardHeader title="Learning Path Details" />
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <FormField label="Current Skills (comma-separated)">
+                <Input
+                  type="text"
+                  placeholder="e.g., Python, SQL, JavaScript"
+                  value={skillsInput}
+                  onChange={(e) => setSkillsInput(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Enter multiple skills separated by commas
+                </p>
+              </FormField>
 
-                <FormField label="Target Job Role">
-                  <Input
-                    type="text"
-                    placeholder="e.g., Data Scientist, Full Stack Developer"
-                    value={targetJob}
-                    onChange={(e) => setTargetJob(e.target.value)}
-                    required
-                  />
-                </FormField>
+              <FormField label="Target Job Role">
+                <Input
+                  type="text"
+                  placeholder="e.g., Data Scientist, Full Stack Developer"
+                  value={targetJob}
+                  onChange={(e) => setTargetJob(e.target.value)}
+                  required
+                />
+              </FormField>
 
-                <FormField label="Timeframe (months)">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="24"
-                    placeholder="e.g., 6"
-                    value={timeframeMonths}
-                    onChange={(e) => setTimeframeMonths(e.target.value)}
-                    required
-                  />
-                </FormField>
+              <FormField label="Timeframe (months)">
+                <Input
+                  type="number"
+                  min="1"
+                  max="24"
+                  placeholder="e.g., 6"
+                  value={timeframeMonths}
+                  onChange={(e) => setTimeframeMonths(e.target.value)}
+                  required
+                />
+              </FormField>
 
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending}
-                  className="w-full"
-                >
-                  {mutation.isPending ? (
-                    <>
-                      <Spinner />
-                      Loading recommendations...
-                    </>
-                  ) : (
-                    "Get Recommendations"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+              <Button
+                type="submit"
+                disabled={mutation.isPending}
+                className="w-full"
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Spinner />
+                    Loading recommendations...
+                  </>
+                ) : (
+                  "Get Recommendations"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -179,6 +156,7 @@ export const YouTubeRecommendationsPage = () => {
           variant="secondary"
           onClick={() => {
             setRecommendations(null);
+            setSkillsInput("");
             setTargetJob("");
             setTimeframeMonths("6");
           }}
