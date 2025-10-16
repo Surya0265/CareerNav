@@ -21,7 +21,15 @@ export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) =>
         setLatestResumeState(data);
       },
       latestTimeline,
-      setLatestTimeline: (data?: TimelineResponse) => setLatestTimelineState(data),
+      setLatestTimeline: (data?: TimelineResponse) => {
+        console.log('CareerDataProvider: setLatestTimeline called with:', {
+          hasData: !!data,
+          hasTimeline: !!data?.timeline,
+          timelineLength: data?.timeline?.length,
+          fullData: JSON.stringify(data, null, 2)
+        });
+        setLatestTimelineState(data);
+      },
     }),
     [latestResume, latestTimeline]
   );
