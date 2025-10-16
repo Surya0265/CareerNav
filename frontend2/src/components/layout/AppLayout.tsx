@@ -13,6 +13,7 @@ const navLinks = [
   { to: "/resume", label: "Resume Upload", icon: "📄" },
   { to: "/analysis", label: "AI Analysis", icon: "🧠" },
   { to: "/timeline", label: "Career Timeline", icon: "🗓️" },
+  { to: "/jobs", label: "Job Recommendations", icon: "💼" },
 ];
 
 export const AppLayout = () => {

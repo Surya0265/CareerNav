@@ -38,6 +38,7 @@ export interface AuthState {
 
 export interface AuthContextValue extends AuthState {
   isAuthenticated: boolean;
+  isInitialized: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
   setUser: (user: User | null) => void;

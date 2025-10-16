@@ -19,21 +19,25 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     user: null,
     token: null,
   });
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const persisted = sessionStorage.getItem(STORAGE_KEY);
-    if (!persisted) return;
-
+    
     try {
-      const parsed = JSON.parse(persisted) as AuthState;
-      if (parsed.token) {
-        setAuthToken(parsed.token);
-        setState({ ...parsed, status: "authenticated" });
+      if (persisted) {
+        const parsed = JSON.parse(persisted) as AuthState;
+        if (parsed.token) {
+          setAuthToken(parsed.token);
+          setState({ ...parsed, status: "authenticated" });
+        }
       }
     } catch (error) {
       console.warn("Failed to parse auth session", error);
       sessionStorage.removeItem(STORAGE_KEY);
     }
+    
+    setIsInitialized(true);
   }, []);
 
   const persist = useCallback((next: AuthState) => {
@@ -67,6 +71,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     user: state.user,
     token: state.token,
     isAuthenticated: state.status === "authenticated" && Boolean(state.token),
+    isInitialized,
     login,
     logout,
     setUser: (user: User | null) =>
@@ -75,7 +80,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         persist(next);
         return next;
       }),
-  }), [state.status, state.user, state.token, login, logout, persist]);
+  }), [state.status, state.user, state.token, isInitialized, login, logout, persist]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
