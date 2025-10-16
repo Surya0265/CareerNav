@@ -12,7 +12,14 @@ export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) =>
   const value = useMemo<CareerDataContextValue>(
     () => ({
       latestResume,
-      setLatestResume: (data?: ResumeUploadResponse) => setLatestResumeState(data),
+      setLatestResume: (data?: ResumeUploadResponse) => {
+        console.log('CareerDataProvider: setLatestResume called with:', {
+          hasData: !!data,
+          hasAiInsights: !!data?.ai_insights,
+          aiInsightsKeys: data?.ai_insights ? Object.keys(data.ai_insights) : []
+        });
+        setLatestResumeState(data);
+      },
       latestTimeline,
       setLatestTimeline: (data?: TimelineResponse) => setLatestTimelineState(data),
     }),

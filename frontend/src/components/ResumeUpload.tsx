@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { BackButton } from './shared/BackButton';
-import { getUserFromStorage } from '../utils/api';
+import { getUserFromStorage, getUserSkills, deleteAllUserSkills, deleteUserResume } from '../utils/api';
 import { isPythonServerRunning } from '../utils/serverCheck';
 import { 
   Brain,
@@ -44,6 +44,7 @@ export function ResumeUpload({ user, onNavigate, onLogout, onBack, canGoBack = f
   const [parseProgress, setParseProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [isPythonServerActive, setIsPythonServerActive] = useState(true); // Assume server is running initially
+  const [hasExistingResume, setHasExistingResume] = useState(false);
   const showBackButton = Boolean(onBack && canGoBack);
   
   // Check if Python server is running
@@ -157,6 +158,25 @@ export function ResumeUpload({ user, onNavigate, onLogout, onBack, canGoBack = f
 
     console.log(`Processing file: ${file.name}, Type: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
     
+    // If user has existing resume, delete old data first
+    if (hasExistingResume) {
+      try {
+        toast.info('Replacing existing resume...');
+        
+        // Delete old skills
+        await deleteAllUserSkills();
+        
+        // Delete old resume
+        await deleteUserResume();
+        
+        toast.success('Old resume data cleared');
+      } catch (error: any) {
+        console.error('Error deleting old resume data:', error);
+        toast.error(`Failed to clear old data: ${error.message}`);
+        return;
+      }
+    }
+    
     // Show parsing progress
     setUploadStep('parsing');
     setParseProgress(0);
@@ -255,6 +275,7 @@ export function ResumeUpload({ user, onNavigate, onLogout, onBack, canGoBack = f
           : []
       }));
       setUploadStep('review');
+      setHasExistingResume(true);
 
       // Helper to infer skill type from skills_by_category
       function inferSkillType(
@@ -460,8 +481,15 @@ export function ResumeUpload({ user, onNavigate, onLogout, onBack, canGoBack = f
           {uploadStep === 'upload' && (
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-8">
-                <h1 className="text-3xl text-foreground mb-4">Upload Your Resume</h1>
-                <p className="text-xl text-muted-foreground">Let AI analyze your resume and provide personalized career recommendations</p>
+                <h1 className="text-3xl text-foreground mb-4">
+                  {hasExistingResume ? 'Replace Your Resume' : 'Upload Your Resume'}
+                </h1>
+                <p className="text-xl text-muted-foreground">
+                  {hasExistingResume 
+                    ? 'Upload a new resume to replace your current one and update your career profile'
+                    : 'Let AI analyze your resume and provide personalized career recommendations'
+                  }
+                </p>
               </div>
 
               <Card className="mb-8 border-0 shadow-xl bg-card/80 backdrop-blur-xl">

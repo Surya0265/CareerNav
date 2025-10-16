@@ -52,8 +52,13 @@ export const ResumeUploadPage = () => {
       });
     },
     onSuccess: (data) => {
+      console.log('Upload successful, data:', data);
       setLatestResume(data);
       setStep("review");
+      
+      // Scroll to top to show the review section
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      
       push({
         title: "Resume extracted",
         description: "Review and confirm your details before generating insights.",
@@ -61,6 +66,7 @@ export const ResumeUploadPage = () => {
       });
     },
     onError: (error: unknown) => {
+      console.error('Upload error:', error);
       const message =
         error instanceof Error ? error.message : "Unable to process resume.";
       push({ title: "Upload failed", description: message, tone: "error" });
@@ -86,6 +92,8 @@ export const ResumeUploadPage = () => {
       });
     },
     onSuccess: (data) => {
+      console.log('Finalize successful, response data:', data);
+      console.log('AI Insights in response:', data.ai_insights);
       setLatestResume(data);
       push({
         title: "Preferences saved",
@@ -130,6 +138,7 @@ export const ResumeUploadPage = () => {
 
   useEffect(() => {
     if (!latestResume) {
+      console.log('No latest resume, resetting to upload step');
       setStep("upload");
       setProfileDetails({ name: "", email: "" });
       setSkillsInput("");
@@ -141,6 +150,7 @@ export const ResumeUploadPage = () => {
       return;
     }
 
+    console.log('Latest resume updated, populating form fields');
     setStep((prev) => (prev === "upload" ? "review" : prev));
 
     setProfileDetails({
@@ -151,7 +161,9 @@ export const ResumeUploadPage = () => {
       email: (latestResume.extracted_info?.email as string | undefined) ?? "",
     });
 
-    setSkillsInput(formatList(latestResume.extracted_info?.detected_skills));
+    const detectedSkills = latestResume.extracted_info?.detected_skills ?? [];
+    console.log('Detected skills:', detectedSkills);
+    setSkillsInput(formatList(detectedSkills));
 
     const experienceSource = Array.isArray(latestResume.extracted_info?.experience_entries)
       ? latestResume.extracted_info?.experience_entries

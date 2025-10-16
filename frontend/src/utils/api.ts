@@ -127,3 +127,93 @@ export async function updateUserProfile(userData: any) {
     throw error;
   }
 }
+
+// Get user skills
+export async function getUserSkills() {
+  try {
+    const userInfo = getUserFromStorage();
+    
+    if (!userInfo || !userInfo.token) {
+      throw new Error('No authentication token found');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/skills`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userInfo.token}`,
+      },
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch user skills');
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Get skills error:', error);
+    throw error;
+  }
+}
+
+// Delete all user skills
+export async function deleteAllUserSkills() {
+  try {
+    const userInfo = getUserFromStorage();
+    
+    if (!userInfo || !userInfo.token) {
+      throw new Error('No authentication token found');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/skills`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userInfo.token}`,
+      },
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete user skills');
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Delete skills error:', error);
+    throw error;
+  }
+}
+
+// Delete user resume
+export async function deleteUserResume() {
+  try {
+    const userInfo = getUserFromStorage();
+    
+    if (!userInfo || !userInfo.token) {
+      throw new Error('No authentication token found');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/resume`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userInfo.token}`,
+      },
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete user resume');
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Delete resume error:', error);
+    throw error;
+  }
+}

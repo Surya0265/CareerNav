@@ -2,6 +2,11 @@ from flask import Flask, request, jsonify
 import os
 import time
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Load environment variables from .env file FIRST
+load_dotenv()
+
 from utils.resume_extractor import extract_resume_text, clean_extracted_text, extract_basic_info
 from utils.gemini_service import GeminiService
 from config import get_config, check_config
@@ -20,9 +25,16 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 print("Checking configuration...")
 config_valid = check_config()
 
+# Check Gemini API Key
+gemini_key_present = bool(os.getenv('GEMINI_API_KEY'))
+print(f"GEMINI_API_KEY present in environment: {gemini_key_present}")
+if not gemini_key_present:
+    print("WARNING: GEMINI_API_KEY not found. AI features will be disabled.")
+    print("Please set GEMINI_API_KEY environment variable to enable AI recommendations.")
+
 # Initialize Gemini service
 try:
-    if config_valid:
+    if config_valid and gemini_key_present:
         gemini_service = GeminiService()
         print("Gemini AI service initialized successfully")
     else:

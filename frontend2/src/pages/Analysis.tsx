@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useCareerData } from "../app/providers/CareerDataContext.ts";
 import { Card, CardContent, CardHeader } from "../components/shared/Card.tsx";
 import { EmptyState } from "../components/shared/EmptyState.tsx";
@@ -7,6 +7,17 @@ import { Badge } from "../components/shared/Badge.tsx";
 export const AnalysisPage = () => {
   const { latestResume } = useCareerData();
   const insights = latestResume?.ai_insights;
+
+  useEffect(() => {
+    console.log('Analysis page - latestResume:', {
+      hasResume: !!latestResume,
+      hasAiInsights: !!insights,
+      insightsKeys: insights ? Object.keys(insights) : []
+    });
+    if (insights) {
+      console.log('Insights content:', insights);
+    }
+  }, [latestResume, insights]);
 
   const recommendedRoles = insights?.career_recommendations?.recommended_roles ?? [];
   const skillGaps = insights?.skill_improvements?.skill_gaps ?? [];
