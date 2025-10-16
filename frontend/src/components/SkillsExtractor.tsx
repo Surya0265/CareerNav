@@ -11,7 +11,8 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import { Upload, X, Check, FileText, ArrowRight, Plus } from 'lucide-react';
-import { getUserSkills, addUserSkill, updateUserSkill, deleteUserSkill } from '../utils/skillsApi';
+import { toast } from 'sonner';
+import { extractSkillsFromResume, saveExtractedSkills } from '../utils/skillsApiExtensions';
 
 interface SkillsExtractorProps {
   onExtracted?: () => void;
@@ -67,10 +68,8 @@ export function SkillsExtractor({ onExtracted }: SkillsExtractorProps) {
       setIsResultsOpen(true);
     } catch (error) {
       console.error('Extraction failed:', error);
-      toast({
-        title: 'Extraction Failed',
-        description: error instanceof Error ? error.message : 'Could not extract skills from resume',
-        variant: 'destructive',
+      toast.error('Extraction failed', {
+        description: error instanceof Error ? error.message : 'Could not extract skills from resume'
       });
     } finally {
       setIsExtracting(false);
@@ -93,20 +92,16 @@ export function SkillsExtractor({ onExtracted }: SkillsExtractorProps) {
       const selectedSkills = extractedSkills.filter(skill => skill.selected);
       
       if (selectedSkills.length === 0) {
-        toast({
-          title: 'No Skills Selected',
-          description: 'Please select at least one skill to save.',
-          variant: 'default',
+        toast('No skills selected', {
+          description: 'Please select at least one skill to save.'
         });
         return;
       }
 
       await saveExtractedSkills(selectedSkills);
       
-      toast({
-        title: 'Skills Saved',
-        description: `${selectedSkills.length} skills have been added to your profile.`,
-        variant: 'default',
+      toast.success('Skills saved', {
+        description: `${selectedSkills.length} skills have been added to your profile.`
       });
       
       // Clear state
@@ -120,10 +115,8 @@ export function SkillsExtractor({ onExtracted }: SkillsExtractorProps) {
       }
     } catch (error) {
       console.error('Saving skills failed:', error);
-      toast({
-        title: 'Failed to Save Skills',
-        description: error instanceof Error ? error.message : 'Could not save skills to your profile',
-        variant: 'destructive',
+      toast.error('Failed to save skills', {
+        description: error instanceof Error ? error.message : 'Could not save skills to your profile'
       });
     } finally {
       setIsSaving(false);

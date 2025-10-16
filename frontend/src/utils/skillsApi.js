@@ -1,7 +1,7 @@
 import { getUserFromStorage } from './api';
 
-const API_BASE_URL = 'http://127.0.0.1:5000'; // Python backend URL
-const NODE_API_URL = 'http://localhost:3000'; // Node server URL
+const PYTHON_API_BASE_URL = 'http://127.0.0.1:5000';
+const NODE_API_BASE_URL = 'http://localhost:3000/api';
 
 /**
  * Extract skills from a resume file
@@ -15,7 +15,7 @@ export async function extractSkillsFromResume(file) {
     const formData = new FormData();
     formData.append('resume', file);
 
-    const response = await fetch(`${API_BASE_URL}/extract-skills`, {
+  const response = await fetch(`${PYTHON_API_BASE_URL}/extract-skills`, {
       method: 'POST',
       body: formData,
     });
@@ -46,13 +46,22 @@ export async function saveExtractedSkills(skills) {
       throw new Error('Authentication required. Please log in.');
     }
     
-    const response = await fetch(`${API_BASE_URL}/api/skills/extract`, {
+    const selectedSkills = skills.filter(skill => skill.selected);
+
+    const response = await fetch(`${NODE_API_BASE_URL}/users/skills/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${userInfo.token}`
       },
-      body: JSON.stringify({ skills })
+      body: JSON.stringify({
+        skills: selectedSkills.map(skill => ({
+          name: skill.name,
+          level: (skill.level || 'intermediate').toLowerCase(),
+          type: skill.type?.toLowerCase() === 'soft' ? 'soft' : 'technical',
+          verified: typeof skill.verified === 'boolean' ? skill.verified : true
+        }))
+      })
     });
 
     if (!response.ok) {
@@ -79,7 +88,7 @@ export async function getUserSkills() {
       throw new Error('Authentication required. Please log in.');
     }
     
-    const response = await fetch(`${NODE_API_URL}/api/skills`, {
+  const response = await fetch(`${NODE_API_BASE_URL}/users/skills`, {
       headers: {
         'Authorization': `Bearer ${userInfo.token}`
       }
@@ -112,7 +121,7 @@ export async function addUserSkill(name, level, type) {
       throw new Error('Authentication required. Please log in.');
     }
     
-    const response = await fetch(`${NODE_API_URL}/api/skills`, {
+  const response = await fetch(`${NODE_API_BASE_URL}/users/skills`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -149,7 +158,7 @@ export async function updateUserSkill(skillId, name, level, type) {
       throw new Error('Authentication required. Please log in.');
     }
     
-    const response = await fetch(`${NODE_API_URL}/api/skills/${skillId}`, {
+  const response = await fetch(`${NODE_API_BASE_URL}/users/skills/${skillId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -184,13 +193,12 @@ export async function deleteUserSkill(skillId, type) {
       throw new Error('Authentication required. Please log in.');
     }
     
-    const response = await fetch(`${NODE_API_URL}/api/skills/${skillId}`, {
+    const response = await fetch(`${NODE_API_BASE_URL}/users/skills/${skillId}?type=${encodeURIComponent(type)}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${userInfo.token}`,
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ type })
+      }
     });
 
     if (!response.ok) {
