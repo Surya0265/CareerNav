@@ -5,7 +5,15 @@ const path = require('path');
 exports.generateCareerTimeline = async (req, res) => {
   try {
     const { current_skills, target_job, timeframe_months, additional_context } = req.body;
+    console.log('timelineController: generateCareerTimeline called with:', {
+      current_skills,
+      target_job,
+      timeframe_months,
+      additional_context
+    });
+    
     if (!current_skills || !target_job || !timeframe_months) {
+      console.error('timelineController: Missing required fields');
       return res.status(400).json({ error: 'current_skills, target_job, and timeframe_months are required' });
     }
 
@@ -17,29 +25,37 @@ exports.generateCareerTimeline = async (req, res) => {
       additional_context ? JSON.stringify(additional_context) : '{}'
     ];
 
+    console.log('timelineController: Spawning Python process with args:', args);
     const py = spawn('python', ['utils/gemini_timeline.py', ...args]);
     let data = '';
     let error = '';
 
     py.stdout.on('data', (chunk) => {
       data += chunk.toString();
+      console.log('timelineController: Python stdout:', chunk.toString());
     });
     py.stderr.on('data', (chunk) => {
       error += chunk.toString();
+      console.log('timelineController: Python stderr:', chunk.toString());
     });
     py.on('close', (code) => {
+      console.log('timelineController: Python process closed with code:', code, 'error:', error, 'data length:', data.length);
       if (code !== 0 || error) {
+        console.error('timelineController: Error detected - code:', code, 'error:', error);
         return res.status(500).json({ error: error || 'Failed to generate timeline' });
       }
       try {
         const result = JSON.parse(data);
+        console.log('timelineController: Successfully parsed result:', result);
         // Always include the mermaid_chart in the response if present
         res.json(result);
       } catch (e) {
+        console.error('timelineController: Failed to parse JSON:', e, 'data:', data);
         res.status(500).json({ error: 'Invalid response from timeline generator' });
       }
     });
   } catch (err) {
+    console.error('timelineController: Exception:', err);
     res.status(500).json({ error: 'Something went wrong' });
   }
 };

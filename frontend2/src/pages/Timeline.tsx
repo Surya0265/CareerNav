@@ -51,9 +51,16 @@ export const TimelinePage = () => {
           : undefined,
       };
 
+      console.log('TimelinePage: Sending payload:', payload);
       return generateTimeline(payload);
     },
     onSuccess: (data) => {
+      console.log('TimelinePage: Timeline generated successfully:', {
+        hasData: !!data,
+        hasTimeline: !!data?.timeline,
+        timelineLength: data?.timeline?.length,
+        data: JSON.stringify(data, null, 2)
+      });
       setLatestTimeline(data);
       push({
         title: "Timeline ready",
@@ -62,6 +69,7 @@ export const TimelinePage = () => {
       });
     },
     onError: (error: unknown) => {
+      console.error('TimelinePage: Error generating timeline:', error);
       const message = error instanceof Error ? error.message : "Failed to generate timeline.";
       push({
         title: "Generation failed",
@@ -77,6 +85,14 @@ export const TimelinePage = () => {
     return milestones.reduce((acc, item) => acc + (item.duration_weeks ?? 0), 0);
   }, [milestones]);
 
+  useEffect(() => {
+    console.log('TimelinePage: milestones updated:', {
+      hasTimeline: !!latestTimeline,
+      milestonesLength: milestones.length,
+      milestones: milestones
+    });
+  }, [milestones, latestTimeline]);
+
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
       <Card>
@@ -88,6 +104,7 @@ export const TimelinePage = () => {
           <form
             onSubmit={(event) => {
               event.preventDefault();
+              console.log('TimelinePage: Form submitted!');
               mutation.mutate();
             }}
             className="space-y-5"

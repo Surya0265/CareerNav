@@ -11,7 +11,9 @@ import {
   LayoutDashboard,
   FileText,
   BrainCircuit,
-  Calendar, Briefcase, Youtube
+  Calendar,
+  Briefcase,
+  Youtube,
 } from "lucide-react";
 
 const navLinks = [

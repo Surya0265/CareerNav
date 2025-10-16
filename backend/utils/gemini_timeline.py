@@ -53,9 +53,13 @@ def create_career_timeline(current_skills, target_job, timeframe_months, additio
         else:
             phase_skills = ["Expert-level concepts", "Industry best practices", "Interview preparation"]
             
+        # Format duration in weeks (assuming roughly 4 weeks per month)
+        duration_weeks = phase['months'] * 4
+        
         timeline.append({
-            "phase": f"{phase['name']} (Months {len(timeline)*2+1}-{len(timeline)*2+phase['months']})",
-            "skills": phase_skills,
+            "title": phase['name'],
+            "description": f"Focus on {', '.join(phase_skills)}",
+            "duration_weeks": duration_weeks,
             "resources": phase_resources
         })
     
@@ -69,13 +73,25 @@ def create_career_timeline(current_skills, target_job, timeframe_months, additio
     
     youtube_resources = search_youtube_videos(search_terms, max_results=5)
     
+    # Generate a simple Mermaid chart
+    mermaid_chart = f"""graph LR
+    Start["Start: Prepare for {target_job}"]
+    {"".join([f"Phase{i}['{phase['title']}'] --> " for i, phase in enumerate(timeline)])}
+    End["Goal: Achieve {target_job}"]
+    Start --> Phase0
+    Phase{len(timeline)-1} --> End"""
+    
     # Structure the response
     result = {
-        "title": f"Career Path: {target_job}",
         "summary": f"A {timeframe_months}-month learning roadmap focusing on {skills_text} skills needed for a {target_job} role.",
-        "youtube_resources": youtube_resources,
         "timeline": timeline,
-        "advice": "Focus on building practical projects that demonstrate your skills. Create a strong GitHub portfolio showing your work. Network with other professionals and contribute to open-source projects."
+        "mermaid_chart": mermaid_chart,
+        "tips": [
+            "Focus on building practical projects that demonstrate your skills.",
+            "Create a strong GitHub portfolio showing your work.",
+            "Network with other professionals and contribute to open-source projects.",
+            f"Dedicate {timeframe_months} months to achieve your goal of becoming a {target_job}."
+        ]
     }
     
     return result
