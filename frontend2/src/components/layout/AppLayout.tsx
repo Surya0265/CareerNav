@@ -21,8 +21,9 @@ const navLinks = [
   { to: "/resume", label: "Resume Upload", icon: FileText },
   { to: "/analysis", label: "AI Analysis", icon: BrainCircuit },
   { to: "/timeline", label: "Career Timeline", icon: Calendar },
-  { to: "/jobs", label: "Job Recommendations", icon: Briefcase },
-  { to: "/youtube", label: "YouTube Learning", icon: Youtube },
+  { to: "/jobs", label: "Job Recommendations", icon: Briefcase},
+  { to: "/youtube", label: "YouTube Learning", icon: Youtube }
+  
 ];
 
 export const AppLayout = () => {
