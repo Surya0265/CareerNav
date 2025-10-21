@@ -5,6 +5,9 @@ export interface TimelineMilestone {
   resources?: string[];
   dependencies?: string[];
   status?: "pending" | "in-progress" | "completed";
+  skills?: string[];
+  projects?: string[];
+  milestones?: string[];
 }
 
 export interface TimelineResponse {
