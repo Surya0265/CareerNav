@@ -90,6 +90,10 @@ app.use('/api/skills', skillsRoutes);
 const aiRoutes = require('./routes/aiRoutes');
 app.use('/api/ai', aiRoutes);
 
+// Add the password reset routes
+const passwordRoutes = require('./routes/passwordRoutes');
+app.use('/api/auth', passwordRoutes);
+
 app.use((req, res) => {
   console.warn(`No route matched for ${req.method} ${req.originalUrl}`);
   res.status(404).json({ error: 'Not Found' });
