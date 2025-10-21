@@ -6,7 +6,7 @@ const User = require('../models/User');
 const Resume = require('../models/Resume');
 
 // Fetch jobs from API
-async function fetchJobs(query, city, country = 'us') {
+async function fetchJobs(query, city, country = 'in') {
   try {
     const url = 'https://jsearch.p.rapidapi.com/search';
     const options = {

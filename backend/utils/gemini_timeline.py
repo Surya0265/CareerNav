@@ -313,9 +313,145 @@ def generate_mermaid_chart(target_job, timeline):
     Generate a horizontal Mermaid flowchart (lr layout).
     Shows phases in a horizontal line with skills and projects below each phase.
     """
+    # helper to truncate without cutting words in half
+    def safe_truncate(text: str, max_len: int) -> str:
+        if not text:
+            return ""
+        text = str(text).strip()
+        if len(text) <= max_len:
+            return text
+        # cut to max_len then backtrack to last space
+        cut = text[:max_len]
+        last_space = cut.rfind(" ")
+        if last_space > max_len // 3:
+            return cut[:last_space] + "..."
+        return cut.rstrip() + "..."
+
+    # helper to escape characters that break Mermaid when used inside quoted labels
+    def escape_label(html: str) -> str:
+        if html is None:
+            return ""
+        s = str(html)
+        # escape ampersand first
+        s = s.replace('&', '&amp;')
+        s = s.replace('"', '&quot;')
+        s = s.replace('<', '&lt;')
+        s = s.replace('>', '&gt;')
+        return s
+
+    # helper to ensure text ends on a complete sentence; if truncated, prefer cutting at sentence boundary
+    def complete_sentences(text: str, max_len: int = 300) -> str:
+        if not text:
+            return ""
+        s = str(text).strip()
+        # If already short enough and ends with sentence punctuation, return as-is
+        if len(s) <= max_len and re.search(r'[\.\!\?]"?\s*$', s):
+            return s
+
+        # If short enough but doesn't end with punctuation, append a period
+        if len(s) <= max_len:
+            return s + ('.' if not s.endswith(('.', '!', '?')) else '')
+
+        # Truncate to max_len and prefer cutting at the last sentence-ending punctuation
+        cut = s[:max_len]
+        last_punc = max(cut.rfind('.'), cut.rfind('!'), cut.rfind('?'))
+        if last_punc != -1 and last_punc > max_len // 3:
+            trimmed = cut[: last_punc + 1].strip()
+            return trimmed
+
+        # If Gemini model is available, ask it to rewrite into 1-2 complete sentences under max_len
+        try:
+            if model:
+                prompt = (
+                    f"Rewrite the following fragment into 1-2 complete, well-formed English sentences"
+                    f" without changing the meaning. Keep the result under {max_len} characters.\n\nFragment:\n" + s
+                )
+                resp = model.generate_content(prompt)
+                out = resp.text.strip()
+                # If model returned something reasonable, use it (but truncate defensively)
+                if out:
+                    out = out.replace('\n', ' ').strip()
+                    if len(out) > max_len:
+                        out = out[:max_len].rstrip()
+                        if out[-1] not in '.!?':
+                            out += '.'
+                    return out
+        except Exception:
+            # On any failure, fall back to a shorter trimmed fragment
+            pass
+
+        # Fallback: trim to last space and append ellipsis, ensure punctuation
+        last_space = cut.rfind(' ')
+        if last_space > 0:
+            trimmed = cut[:last_space].rstrip() + '...'
+        else:
+            trimmed = cut.rstrip() + '...'
+        if trimmed[-1] not in '.!?':
+            trimmed += '.'
+        return trimmed
+
+    # helper to remove numbered list markers like '1. ', '2) ', '(1) ', at line starts
+    def remove_numbered_lists(text: str) -> str:
+        if not text:
+            return text
+        s = str(text)
+        # remove markers at start of entire string or after newlines / HTML breaks
+        # patterns: '1. ', '1) ', '(1) '
+        s = re.sub(r'(?m)^\s*\(?(\d+)\)?[\.\)]\s*', '', s)
+        # handle HTML line-breaks followed by numbering
+        s = re.sub(r'(<br\s*/?>)\s*\(?(\d+)\)?[\.\)]\s*', r'\1 ', s, flags=re.IGNORECASE)
+        return s
+
+    # helper to expand a short description/title into a more detailed paragraph
+    # Uses Gemini model if available, otherwise falls back to complete_sentences
+    def expand_description(title: str, short_text: str, skills_list=None, projects_list=None, max_len: int = 500) -> str:
+        base = (short_text or "").strip()
+        # If we already have a reasonably long, well-formed paragraph, prefer it
+        if base and len(base) > 200 and re.search(r'[\.\!\?]\s*$', base):
+            return base
+
+        prompt_lines = [
+            "Expand the following phase into a clear, professional paragraph (2-4 sentences) describing goals, outcomes, and recommended activities.",
+            f"Title: {title}",
+            f"Short: {base}" if base else "Short: (none)",
+        ]
+        if skills_list:
+            prompt_lines.append("Skills: " + ", ".join(skills_list[:6]))
+        if projects_list:
+            prompt_lines.append("Projects: " + ", ".join(projects_list[:4]))
+        prompt_lines.append(f"Keep the output under {max_len} characters and use complete sentences.")
+
+        prompt = "\n".join(prompt_lines)
+        try:
+            if model:
+                resp = model.generate_content(prompt)
+                out = (resp.text or "").strip().replace('\n', ' ')
+                if not out:
+                    raise ValueError("empty response")
+                if len(out) > max_len:
+                    out = out[:max_len].rstrip()
+                    if out[-1] not in '.!?':
+                        out += '.'
+                return out
+        except Exception:
+            # fall through to local fallback
+            pass
+
+        # Local fallback: produce a complete sentence version
+        if base:
+            return complete_sentences(base, max_len=max_len)
+        return complete_sentences(title, max_len=max_len)
+    # Build start label as clean HTML (min-width) — escape only the dynamic target role
+    start_inner = (
+        '<div style="min-width:2200px;display:inline-block;text-align:center;">'
+        '<div style="font-size:150px; font-weight:800; color:#ffffff;">CAREER JOURNEY START</div>'
+        f'<div style="font-size:120px; color:#ffffff; margin-top:12px;">Target Role: {escape_label(safe_truncate(target_job, 60))}</div>'
+        '<div style="font-size:120px; color:#ffffff; margin-top:12px;">Your transformation begins now!</div>'
+        '</div>'
+    )
     lines = [
         "graph LR",
-        f'    Start["<b>START</b><br/>{target_job}"]',
+        "    " + f'Start[{start_inner}]',
         ""
     ]
     
@@ -327,34 +463,73 @@ def generate_mermaid_chart(target_job, timeline):
         phase_num = idx + 1
         phase_id = f"P{phase_num}"
         
-        title = phase.get("title", f"Phase {phase_num}").replace('"', '\\"')[:20]  # Limit title length
+        raw_title = phase.get("title", f"Phase {phase_num}")
+        # Remove any leading 'Phase N:' or 'PHASE N:' to avoid duplication when we
+        # prepend 'PHASE {phase_num}:' below (prevents 'PHASE 2: Phase 2: ...').
+        # Remove numbered list markers first (e.g. '1. ', '2) ', '(1) ')
+        cleaned_title = remove_numbered_lists(raw_title)
+        # Remove any leading 'Phase N:' that may remain after stripping numbers
+        cleaned_title = re.sub(r'^phase\s*\d+\s*:?\s*', '', cleaned_title, flags=re.IGNORECASE)
+        title = safe_truncate(cleaned_title.replace('"', '\\"'), 60)
         duration = phase.get("duration_weeks", 0)
-        
-        # Main phase node - clean text without special chars, larger with more spacing
-        phase_label = f"Phase {phase_num}<br/>{title}<br/>{duration}w"
+        # Read skills/projects early so we can include them when expanding descriptions
+        skills = phase.get("skills", [])
+        projects = phase.get("projects", [])
+        raw_description = phase.get("description", "")
+        raw_description = remove_numbered_lists(raw_description)
+        description = safe_truncate(raw_description, 140) if raw_description else ""
+
+        # Main phase node - use an HTML label with a wide inner div so text wraps horizontally
+        # Build an inline-friendly title and description (escaped/truncated)
+        title_html = f"<strong>{escape_label(title)}</strong>"
+        # Build a detailed description (no duration shown in the phase box)
+        desc_plain = expand_description(title, raw_description, skills_list=skills, projects_list=projects, max_len=500)
+        desc_html = escape_label(desc_plain.replace('\n', '<br/>'))
+
+        phase_label = (
+            f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
+            f'<div style="font-size:150px; margin-bottom:8px; font-weight:700; color:#ffffff!important;">PHASE {phase_num}: {title_html}</div>'
+            f'<div style="font-size:150px; color:#ffffff!important;">{desc_html}</div>'
+            f'</div>'
+        )
+        # Use htmlLabels (frontend mermaid init already enables htmlLabels)
         lines.append(f'    {phase_id}["{phase_label}"]')
         phase_ids.append(phase_id)
         
-        # Skills node below this phase - clean format
+        # Skills node below this phase - clean format without problematic Unicode
         skills = phase.get("skills", [])
         if skills:
-            # Remove special characters, just show skill names
-            skills_text = "<br/>".join([f"• {s[:14]}" for s in skills[:6]])  # Show up to 6 skills, limit length
-            if len(skills) > 6:
-                skills_text += f"<br/>+{len(skills) - 6} more"
+            # Render skills inline separated by commas to keep nodes short and wide
+            safe_skills = [safe_truncate(remove_numbered_lists(s), 40) for s in skills[:8]]
+            skills_inline = ", ".join(safe_skills)
+            if len(skills) > 8:
+                skills_inline += f", +{len(skills) - 8} more"
             skill_id = f"SK{phase_num}"
-            lines.append(f'    {skill_id}["<b>Learn:</b><br/>{skills_text}"]')
+            skill_label = (
+                f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
+                # Force the Skills heading to white and use 150px
+                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Skills</div>'
+                f'<div style="font-size:150px; color:#ffffff!important;">{escape_label(skills_inline)}</div>'
+                f'</div>'
+            )
+            lines.append(f'    {skill_id}["{skill_label}"]')
             lines.append(f"    {phase_id} --> {skill_id}")
         
-        # Projects node below this phase - clean format
+        # Projects node below this phase - clean format without problematic Unicode
         projects = phase.get("projects", [])
         if projects:
-            # Remove special characters, just show project names
-            projects_text = "<br/>".join([f"◆ {p[:12]}" for p in projects[:5]])  # Show up to 5 projects, limit length
-            if len(projects) > 5:
-                projects_text += f"<br/>+{len(projects) - 5} more"
+            safe_projects = [safe_truncate(remove_numbered_lists(p), 80) for p in projects[:6]]
+            projects_inline = ", ".join(safe_projects)
+            if len(projects) > 6:
+                projects_inline += f", +{len(projects) - 6} more"
             project_id = f"PR{phase_num}"
-            lines.append(f'    {project_id}["<b>Build:</b><br/>{projects_text}"]')
+            project_label = (
+                f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
+                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Projects</div>'
+                f'<div style="font-size:150px; color:#ffffff!important;">{escape_label(projects_inline)}</div>'
+                f'</div>'
+            )
+            lines.append(f'    {project_id}["{project_label}"]')
             lines.append(f"    {phase_id} --> {project_id}")
         
         lines.append("")
@@ -363,19 +538,29 @@ def generate_mermaid_chart(target_job, timeline):
     for i in range(len(phase_ids) - 1):
         lines.append(f"    {phase_ids[i]} --> {phase_ids[i + 1]}")
     
-    # Add final completion node - clean format
-    lines.append(f'    End["<b>COMPLETE</b><br/>Ready for {target_job[:15]}"]')
+    # Add final completion node - larger format (HTML label, escape dynamic text)
+    completion_inner = (
+        '<div style="min-width:2200px;display:inline-block;text-align:center;">'
+        '<div style="font-size:150px; font-weight:800; color:#ffffff;">JOURNEY COMPLETE</div>'
+        f'<div style="font-size:120px; color:#ffffff; margin-top:12px;">Ready for {escape_label(safe_truncate(target_job, 60))}</div>'
+        '<div style="font-size:120px; color:#ffffff; margin-top:12px;">Congratulations on your achievement!</div>'
+        '</div>'
+    )
+    lines.append("    " + f'End[{completion_inner}]')
     lines.append(f"    {phase_ids[-1]} --> End")
     lines.append("")
     
-    # Add styling with larger nodes and fonts
+    # Add styling with larger nodes and fonts (use valid Mermaid classDef properties)
     lines.extend([
-        "    classDef startEnd fill:#10b981,stroke:#059669,color:#fff,stroke-width:4px,font-size:16px,font-weight:bold",
-        "    classDef phase fill:#3b82f6,stroke:#1e40af,color:#fff,stroke-width:4px,font-size:14px,font-weight:bold",
-        "    classDef skills fill:#f59e0b,stroke:#d97706,color:#000,stroke-width:3px,font-size:12px",
-        "    classDef projects fill:#8b5cf6,stroke:#6d28d9,color:#fff,stroke-width:3px,font-size:12px",
+        "    classDef startEnd fill:#10b981,stroke:#059669,color:#fff,stroke-width:16px,font-size:150px,font-weight:bold",
+        "    classDef phase fill:#3b82f6,stroke:#1e40af,color:#fff,stroke-width:14px,font-size:150px,font-weight:bold",
+    # Make the default text color for skills nodes white so inline headings aren't overridden
+    "    classDef skills fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:12px,font-size:150px,font-weight:bold",
+        "    classDef projects fill:#8b5cf6,stroke:#6d28d9,color:#fff,stroke-width:12px,font-size:150px,font-weight:bold",
         "",
         "    class Start,End startEnd",
+        # Make links/arrows much bolder
+        "    linkStyle default stroke-width:22px,stroke:#ffffff,stroke-linecap:round"
     ])
     
     # Apply styling dynamically
