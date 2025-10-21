@@ -310,7 +310,7 @@ def parse_iso_duration_to_minutes(duration):
 
 def generate_mermaid_chart(target_job, timeline):
     """
-    Generate a horizontal Mermaid flowchart (LR layout).
+    Generate a horizontal Mermaid flowchart (lr layout).
     Shows phases in a horizontal line with skills and projects below each phase.
     """
     lines = [
