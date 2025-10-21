@@ -76,7 +76,7 @@ export const AppLayout = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="flex min-h-screen w-full">
-        <aside className="hidden w-64 flex-col border-r border-slate-800 bg-slate-950/80 p-6 md:flex">
+        <aside className="sticky top-0 h-screen hidden w-64 flex-col border-r border-slate-800 bg-slate-950/80 p-6 md:flex overflow-y-auto">
           <div className="mb-8 space-y-1">
             <p className="text-xs uppercase tracking-widest text-blue-400">
               CareerNav

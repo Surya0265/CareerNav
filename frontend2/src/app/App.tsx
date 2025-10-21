@@ -11,6 +11,8 @@ import { JobRecommendationsPage } from "../pages/JobRecommendations.tsx";
 import { YouTubeRecommendationsPage } from "../pages/YouTubeRecommendations.tsx";
 import { LoginPage } from "../pages/Login.tsx";
 import { SignupPage } from "../pages/Signup.tsx";
+import { ForgotPasswordPage } from "../pages/ForgotPassword.tsx";
+import { ResetPasswordPage } from "../pages/ResetPassword.tsx";
 import type { ReactElement } from "react";
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -34,6 +36,22 @@ const AppRouter = () => (
       element={
         <AuthLayout>
           <LoginPage />
+        </AuthLayout>
+      }
+    />
+    <Route
+      path="/forgot-password"
+      element={
+        <AuthLayout>
+          <ForgotPasswordPage />
+        </AuthLayout>
+      }
+    />
+    <Route
+      path="/reset-password"
+      element={
+        <AuthLayout>
+          <ResetPasswordPage />
         </AuthLayout>
       }
     />

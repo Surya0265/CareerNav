@@ -26,6 +26,14 @@ const UserSchema = new mongoose.Schema(
       minlength: 6,
       select: false, // Don't return password in query results
     },
+    passwordResetToken: {
+      type: String,
+      select: false, // Don't return token in query results
+    },
+    passwordResetExpiry: {
+      type: Date,
+      select: false, // Don't return expiry in query results
+    },
     skills: [
       {
         name: { type: String, required: true },
