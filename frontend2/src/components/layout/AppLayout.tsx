@@ -115,8 +115,8 @@ export const AppLayout = () => {
           </nav>
         </aside>
 
-        <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-40 flex flex-col gap-4 border-b border-slate-800 bg-slate-950/80 px-5 py-4 backdrop-blur">
+        <div className="flex min-h-screen flex-1 flex-col pt-20">
+          <header className="fixed top-0 left-0 right-0 md:left-64 md:w-[calc(100%-16rem)] z-40 flex flex-col gap-4 border-b border-slate-800 bg-slate-950/80 px-5 py-4 backdrop-blur">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">

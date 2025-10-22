@@ -203,6 +203,17 @@ export const JobRecommendationsPage = () => {
     filterJobs(searchQuery, newSkills);
   };
 
+  // Helper to produce a stable, human-friendly label for skill entries which
+  // may be strings or objects like { _id, name, verified }
+  const skillLabel = (s: any) => {
+    if (!s && s !== 0) return "Unnamed skill";
+    if (typeof s === "string") return s;
+    if (typeof s === "object") {
+      return s.name || s.skill || s.label || (typeof s._id === 'string' ? `${s._id.slice(0, 8)}...` : 'Unnamed skill');
+    }
+    return String(s);
+  };
+
   const filterJobs = (query: string, skills: Set<string>) => {
     if (!jobsData?.jobs) return;
 
@@ -221,11 +232,24 @@ export const JobRecommendationsPage = () => {
 
     // Filter by selected skills
     if (skills.size > 0) {
+      // Resolve skill keys (which may be IDs or names) back to human labels
+      const skillLabels = Array.from(skills).map((k) => {
+        // If jobsData.skills contains strings, k may already be the label
+        if (!jobsData.skills || jobsData.skills.length === 0) return k;
+        // Try to find matching entry in jobsData.skills
+        const found = (jobsData.skills as any[]).find((s: any) => {
+          if (typeof s === "string") return s === k;
+          // compare by _id or name
+          return s._id === k || s.name === k;
+        });
+  if (found) return typeof found === "string" ? found : (skillLabel(found) ?? k);
+        // fallback: treat key as label
+        return k;
+      });
+
       filtered = filtered.filter((job: Job) => {
         const jobText = `${job.title} ${job.company}`.toLowerCase();
-        return Array.from(skills).some((skill: string) =>
-          jobText.includes(skill.toLowerCase())
-        );
+        return skillLabels.some((label) => jobText.includes(String(label).toLowerCase()));
       });
     }
 
@@ -303,7 +327,9 @@ export const JobRecommendationsPage = () => {
                 <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm text-slate-300">{rec.skills?.join?.(', ') || '—'}</div>
+                              <div className="text-sm text-slate-300">{(rec.skills && rec.skills.length > 0)
+                                ? rec.skills.map((s: any) => skillLabel(s)).join(', ')
+                                : '—'}</div>
                       <div className="text-xs text-slate-500">{rec.city || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
                     </div>
                     <div className="flex gap-2">
@@ -588,20 +614,24 @@ export const JobRecommendationsPage = () => {
             />
             <CardContent className="!space-y-0">
               <div className="flex flex-wrap gap-2">
-                {jobsData.skills.map((skill: string) => (
-                  <button
-                    key={skill}
-                    onClick={() => toggleSkill(skill)}
-                    className={cn(
-                      "rounded-full px-4 py-2 text-sm font-medium transition-all",
-                      selectedSkills.has(skill)
-                        ? "border-blue-400 bg-blue-500/20 text-blue-100"
-                        : "border border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-600 hover:bg-slate-900/60"
-                    )}
-                  >
-                    {skill}
-                  </button>
-                ))}
+                {jobsData.skills.map((skill: any) => {
+                  const skillKey = typeof skill === "string" ? skill : (skill._id ?? skill.name ?? skillLabel(skill));
+                  const label = skillLabel(skill);
+                  return (
+                    <button
+                      key={skillKey}
+                      onClick={() => toggleSkill(skillKey)}
+                      className={cn(
+                        "rounded-full px-4 py-2 text-sm font-medium transition-all",
+                        selectedSkills.has(skillKey)
+                          ? "border-blue-400 bg-blue-500/20 text-blue-100"
+                          : "border border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-600 hover:bg-slate-900/60"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

@@ -1,10 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppProviders } from "./providers/AppProviders.tsx";
 import { AppLayout } from "../components/layout/AppLayout.tsx";
 import { AuthLayout } from "../components/layout/AuthLayout.tsx";
 import { ErrorBoundary } from "../components/ErrorBoundary.tsx";
 import { useAuth } from "../hooks/useAuth.ts";
 import { DashboardPage } from "../pages/Dashboard.tsx";
+import { LandingPage } from "../pages/LandingPage.tsx";
 import { ResumeUploadPage } from "../pages/ResumeUpload.tsx";
 import { AnalysisPage } from "../pages/Analysis.tsx";
 import { TimelinePage } from "../pages/Timeline.tsx";
@@ -21,12 +22,26 @@ import type { ReactElement } from "react";
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { isAuthenticated, isInitialized } = useAuth();
+  const location = useLocation();
 
   if (!isInitialized) {
     return null; // Show nothing while checking auth status
   }
 
-  if (!isAuthenticated) {
+  // Only redirect to login for known protected paths. This prevents the
+  // protected layout from redirecting public routes like "/" (LandingPage).
+  const protectedPrefixes = [
+    "/dashboard",
+    "/resume",
+    "/analysis",
+    "/timeline",
+    "/jobs",
+    "/youtube",
+  ];
+
+  const isProtectedPath = protectedPrefixes.some((p) => location.pathname.startsWith(p));
+
+  if (!isAuthenticated && isProtectedPath) {
     return <Navigate to="/login" replace />;
   }
 
@@ -35,6 +50,8 @@ const ProtectedRoute = ({ children }: { children: ReactElement }) => {
 
 const AppRouter = () => (
   <Routes>
+    <Route path="/" element={<LandingPage />} />
+    
     <Route
       path="/login"
       element={
@@ -90,7 +107,7 @@ const AppRouter = () => (
         </ProtectedRoute>
       }
     >
-      <Route index element={<DashboardPage />} />
+      <Route path="dashboard" element={<DashboardPage />} />
       <Route path="resume" element={<ResumeUploadPage />} />
       <Route path="analysis" element={<AnalysisPage />} />
       <Route path="timeline" element={<TimelinePage />} />
