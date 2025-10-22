@@ -4,6 +4,7 @@ const FormData = require('form-data');
 const fs = require('fs');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
+const JobRecommendation = require('../models/JobRecommendation');
 
 // Fetch jobs from API
 async function fetchJobs(query, city, country = 'in') {
@@ -160,7 +161,21 @@ exports.getJobsByUploadedResume = async (req, res) => {
     
     // Fetch jobs based on extracted skills
     const allJobs = await extractJobsForSkills(skillNames, city, country);
-    
+
+    // Persist recommendation
+    try {
+      await JobRecommendation.create({
+        user: req.user?._id,
+        skills: skillNames,
+        city,
+        country,
+        source: 'uploaded',
+        jobs: allJobs,
+      });
+    } catch (e) {
+      console.error('Failed to save job recommendation:', e.message);
+    }
+
     res.json({ 
       skills: skillNames, 
       jobs: allJobs,
@@ -220,7 +235,21 @@ exports.getJobsByExistingSkills = async (req, res) => {
     
     // Fetch jobs based on existing skills
     const allJobs = await extractJobsForSkills(skills, city, country);
-    
+
+    // Persist recommendation
+    try {
+      await JobRecommendation.create({
+        user: req.user._id,
+        skills,
+        city,
+        country,
+        source: 'existing',
+        jobs: allJobs,
+      });
+    } catch (e) {
+      console.error('Failed to save job recommendation:', e.message);
+    }
+
     res.json({ 
       skills, 
       jobs: allJobs,
@@ -294,6 +323,18 @@ exports.getJobsForExtractedSkills = async (req, res) => {
     }
   } catch (err) {
     console.error('Job search controller error:', err);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+};
+
+// Get job recommendation history for authenticated user
+exports.getJobRecommendationsHistory = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+    const records = await JobRecommendation.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(50);
+    res.json({ records });
+  } catch (err) {
+    console.error('getJobRecommendationsHistory error:', err);
     res.status(500).json({ error: 'Something went wrong' });
   }
 };
