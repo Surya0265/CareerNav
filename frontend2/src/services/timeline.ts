@@ -22,3 +22,13 @@ export const generatePlan = async (
   );
   return data;
 };
+
+export const getTimelineHistory = async () => {
+  const { data } = await apiClient.get('/timeline/history');
+  return data;
+};
+
+export const completePhase = async (payload: { planId: string; phaseOrder: number }) => {
+  const { data } = await apiClient.post('/timeline/complete-phase', payload);
+  return data;
+};

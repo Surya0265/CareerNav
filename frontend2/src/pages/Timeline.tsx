@@ -3,6 +3,8 @@ import { useMutation } from "@tanstack/react-query";
 import { generateTimeline } from "../services/timeline.ts";
 import type { TimelineRequest, TimelineResponse } from "../types/timeline.ts";
 import { useCareerData } from "../app/providers/CareerDataContext.ts";
+import { getTimelineHistory } from "../services/timeline.ts";
+import { useAuth } from "../hooks/useAuth.ts";
 import { useToast } from "../components/shared/ToastContext.ts";
 import { Card, CardContent, CardHeader } from "../components/shared/Card.tsx";
 import { FormField } from "../components/shared/FormField.tsx";
@@ -13,6 +15,7 @@ import { Spinner } from "../components/shared/Spinner.tsx";
 import { EmptyState } from "../components/shared/EmptyState.tsx";
 import { Badge } from "../components/shared/Badge.tsx";
 import { MermaidChart } from "../components/MermaidChart.tsx";
+import { useNavigate } from "react-router-dom";
 
 const defaultRequest: TimelineRequest = {
   current_skills: ["JavaScript", "React", "Node.js"],
@@ -23,6 +26,10 @@ const defaultRequest: TimelineRequest = {
 export const TimelinePage = () => {
   const { latestResume, latestTimeline, setLatestTimeline } = useCareerData();
   const { push } = useToast();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [history, setHistory] = useState<any[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [skillsInput, setSkillsInput] = useState(defaultRequest.current_skills.join(", "));
   const [targetRole, setTargetRole] = useState(defaultRequest.target_job);
@@ -225,6 +232,58 @@ export const TimelinePage = () => {
         </CardContent>
       </Card>
 
+      <div className="flex items-center justify-between">
+        <div />
+        <div>
+          <button
+            onClick={async () => {
+              if (!isAuthenticated) {
+                push({ title: 'Sign in required', description: 'Please login to view your saved timelines', tone: 'info' });
+                return;
+              }
+              try {
+                setHistoryLoading(true);
+                const resp = await getTimelineHistory();
+                setHistory(resp.records || []);
+              } catch (err) {
+                console.error('Failed to fetch timeline history', err);
+                push({ title: 'Error', description: 'Failed to fetch timeline history', tone: 'error' });
+              } finally {
+                setHistoryLoading(false);
+              }
+            }}
+            className="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+          >
+            {historyLoading ? 'Loading...' : 'Mark your progess'}
+          </button>
+        </div>
+      </div>
+
+      {/* History list (if present) */}
+      {history && history.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-white">Timeline Plans</h2>
+          <div className="grid gap-3">
+            {history.map((rec: any) => (
+              <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm text-slate-300">{rec.target_job || '—'}</div>
+                    <div className="text-xs text-slate-500">{rec.current_skills?.join?.(', ') || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
+                  </div>
+                  <button
+                    className="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-300"
+                    onClick={() => navigate(`/timeline/${rec._id}`)}
+                  >
+                    Mark
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Phases with Details Layout */}
       {milestones.length > 0 ? (
         <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
@@ -379,7 +438,7 @@ export const TimelinePage = () => {
           description="Your step-by-step path to your target role"
         />
         <CardContent>
-          {latestTimeline?.mermaid_chart ? (
+          {latestTimeline?.mermaid_chart && (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 overflow-x-auto">
               {/* Download JPG only (high quality) */}
               <div className="flex gap-2 mb-4">
@@ -393,17 +452,8 @@ export const TimelinePage = () => {
                 </button>
               </div>
 
-              <MermaidChart chart={latestTimeline?.mermaid_chart || ''} onExportRef={(el) => (chartContainerRef.current = el)} />
+              <MermaidChart chart={latestTimeline.mermaid_chart} onExportRef={(el) => (chartContainerRef.current = el)} />
             </div>
-          ) : mutation.isPending ? (
-            <div className="flex items-center justify-center py-20">
-              <Spinner />
-            </div>
-          ) : (
-            <EmptyState
-              title="No diagram yet"
-              description="Generate a timeline to see your career progression as a visual roadmap."
-            />
           )}
         </CardContent>
       </Card>

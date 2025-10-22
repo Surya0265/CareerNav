@@ -8,13 +8,18 @@ const {
 } = require('../controllers/jobController');
 const { protect } = require('../middleware/authMiddleware');
 
+const { getJobRecommendationsHistory } = require('../controllers/jobController');
+
 // Upload new resume and get job recommendations
-router.post('/jobs-by-resume', upload.single('resume'), getJobsByUploadedResume);
+router.post('/jobs-by-resume', protect, upload.single('resume'), getJobsByUploadedResume);
 
 // Get jobs by existing skills (user must be authenticated)
 router.post('/jobs-by-skills', protect, getJobsByExistingSkills);
 
 // Legacy route
 router.post('/jobs-search', upload.single('resume'), getJobsForExtractedSkills);
+
+// Get history of job recommendation runs (authenticated)
+router.get('/history', protect, getJobRecommendationsHistory);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 // Controller to generate YouTube recommendations using Python script
 const { spawn } = require('child_process');
+const YouTubeRecommendation = require('../models/YouTubeRecommendation');
 
 exports.generateYouTubeRecommendations = async (req, res) => {
   try {
@@ -48,7 +49,7 @@ exports.generateYouTubeRecommendations = async (req, res) => {
       }
     });
 
-    py.on('close', (code) => {
+  py.on('close', async (code) => {
       console.log('youtubeController: Python process closed with code:', code, 'error:', error, 'data length:', data.length);
       
       if ((code !== 0 || error) && !data) {
@@ -59,6 +60,22 @@ exports.generateYouTubeRecommendations = async (req, res) => {
       try {
         const result = JSON.parse(data);
         console.log('youtubeController: Successfully parsed result');
+
+        // Persist recommendation (best-effort) - prefer youtube_resources if present
+        try {
+          const videos = result.youtube_resources || result.videos || [];
+          await YouTubeRecommendation.create({
+            user: req.user?._id,
+            current_skills,
+            target_job,
+            timeframe_months,
+            additional_context,
+            videos,
+          });
+        } catch (e) {
+          console.error('Failed to save YouTube recommendation:', e.message);
+        }
+
         res.json(result);
       } catch (e) {
         console.error('youtubeController: Failed to parse JSON:', e, 'data:', data);
@@ -67,6 +84,18 @@ exports.generateYouTubeRecommendations = async (req, res) => {
     });
   } catch (err) {
     console.error('youtubeController: Exception:', err);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+};
+
+// Get history for user's YouTube recommendation runs
+exports.getYouTubeRecommendationsHistory = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) return res.status(401).json({ error: 'Unauthorized' });
+    const records = await YouTubeRecommendation.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(50);
+    res.json({ records });
+  } catch (err) {
+    console.error('getYouTubeRecommendationsHistory error:', err);
     res.status(500).json({ error: 'Something went wrong' });
   }
 };
