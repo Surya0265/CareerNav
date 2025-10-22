@@ -11,10 +11,15 @@ import {
   getYouTubeRecommendations,
   type YouTubeVideo,
 } from "../services/youtube.ts";
+import { getYouTubeHistory } from "../services/youtube.ts";
+import { useAuth } from "../hooks/useAuth.ts";
 
 export const YouTubeRecommendationsPage = () => {
   const { push } = useToast();
   const { youtubeData, setYouTubeData } = useYouTubeRecommendations();
+  const [history, setHistory] = useState<any[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const [skillsInput, setSkillsInput] = useState("");
   const [targetJob, setTargetJob] = useState("");
@@ -82,6 +87,62 @@ export const YouTubeRecommendationsPage = () => {
             Get personalized YouTube recommendations based on your career goal
           </p>
         </div>
+
+        <div className="flex items-center justify-between">
+          <div />
+          <div>
+            <button
+              onClick={async () => {
+                  if (!isAuthenticated) {
+                    push({ title: 'Sign in required', description: 'Please login to view your saved youtube runs', tone: 'info' });
+                    return;
+                  }
+                  try {
+                    setHistoryLoading(true);
+                    const resp = await getYouTubeHistory();
+                    setHistory(resp.records || []);
+                  } catch (err) {
+                    console.error('Failed to fetch youtube history', err);
+                    push({ title: 'Error', description: 'Failed to fetch youtube history', tone: 'error' });
+                  } finally {
+                    setHistoryLoading(false);
+                  }
+                }}
+              className="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+            >
+              {historyLoading ? 'Loading...' : 'View history'}
+            </button>
+          </div>
+        </div>
+
+        {/* History list */}
+        {history && history.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-white">Previous Recommendations</h2>
+            <div className="grid gap-3">
+              {history.map((rec: any) => (
+                <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm text-slate-300">{rec.current_skills?.join?.(', ') || '—'}</div>
+                      <div className="text-xs text-slate-500">{rec.target_job || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setYouTubeData({ title: 'Previous run', summary: rec.additional_context?.notes || '', youtube_resources: rec.videos || [], tips: [] });
+                        }}
+                        className="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white"
+                      >
+                        View in detail
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Card>
           <CardHeader title="Learning Path Details" />

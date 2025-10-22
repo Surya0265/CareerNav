@@ -8,6 +8,7 @@ import { DashboardPage } from "../pages/Dashboard.tsx";
 import { ResumeUploadPage } from "../pages/ResumeUpload.tsx";
 import { AnalysisPage } from "../pages/Analysis.tsx";
 import { TimelinePage } from "../pages/Timeline.tsx";
+import { TimelineView } from "../pages/TimelineView.tsx";
 import { JobRecommendationsPage } from "../pages/JobRecommendations.tsx";
 import { YouTubeRecommendationsPage } from "../pages/YouTubeRecommendations.tsx";
 import { LoginPage } from "../pages/Login.tsx";
@@ -75,6 +76,7 @@ const AppRouter = () => (
       <Route path="resume" element={<ResumeUploadPage />} />
       <Route path="analysis" element={<AnalysisPage />} />
       <Route path="timeline" element={<TimelinePage />} />
+  <Route path="timeline/:id" element={<TimelineView />} />
       <Route path="jobs" element={<JobRecommendationsPage />} />
       <Route path="youtube" element={<YouTubeRecommendationsPage />} />
     </Route>

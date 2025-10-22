@@ -37,3 +37,8 @@ export const getYouTubeRecommendations = async (
     throw error;
   }
 };
+
+export const getYouTubeHistory = async () => {
+  const { data } = await apiClient.get('/youtube/history');
+  return data;
+};

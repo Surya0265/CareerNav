@@ -43,3 +43,8 @@ export const getJobRecommendations = async (
 
   throw new Error("Invalid request type");
 };
+
+export const getJobRecommendationsHistory = async () => {
+  const { data } = await apiClient.get('/jobs/history');
+  return data;
+};
