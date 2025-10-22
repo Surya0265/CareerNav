@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const { hashPassword, matchPassword, generateToken } = require('../utils/auth/authUtils');
+const crypto = require('crypto');
+const { sendVerificationEmail } = require('../utils/emailService');
 const { validatePasswordStrength } = require('../utils/passwordValidator');
 
 const SKILL_LEVEL_MAP = {
@@ -167,7 +169,21 @@ const registerUser = async (req, res) => {
 
     // If user creation was successful, generate token and send response
     if (user) {
-      console.log('Generating token for user');
+      // Generate verification token and send verification email
+      try {
+        const verificationToken = crypto.randomBytes(20).toString('hex');
+        user.verificationToken = verificationToken;
+        user.verificationExpiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+        await user.save();
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(user.email)}`;
+        await sendVerificationEmail(user.email, verificationToken, verificationUrl);
+      } catch (emailErr) {
+        console.error('Error sending verification email:', emailErr);
+      }
+
+      console.log('Generating token for user (unverified)');
       res.status(201).json({
         _id: user._id,
         name: user.name,
@@ -175,6 +191,7 @@ const registerUser = async (req, res) => {
         avatar: user.avatar,
         preferences: user.preferences,
         accountSettings: user.accountSettings,
+        // Note: user not verified yet
         token: generateToken(user._id)
       });
     } else {
@@ -217,6 +234,9 @@ const loginUser = async (req, res) => {
 
     // Check if user exists and password matches
     if (user && (await matchPassword(password, user.password))) {
+      if (!user.isVerified) {
+        return res.status(403).json({ error: 'Email not verified' });
+      }
       res.json({
         _id: user._id,
         name: user.name,
@@ -755,4 +775,68 @@ module.exports = {
   updateUserSkill,
   deleteUserSkill,
   addUserSkillsBatch
+  , verifyEmail, resendVerification
 };
+
+/**
+ * @desc Verify email using token
+ * @route GET /api/users/verify
+ * @access Public
+ */
+async function verifyEmail(req, res) {
+  try {
+    const { token, email } = req.query;
+    if (!token || !email) {
+      return res.status(400).json({ error: 'Missing token or email' });
+    }
+
+    const user = await User.findOne({ email: email.toString() }).select('+verificationToken +verificationExpiry +isVerified');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user.isVerified) return res.json({ message: 'Already verified' });
+
+    if (user.verificationToken !== token.toString() || Date.now() > user.verificationExpiry) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpiry = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified' });
+  } catch (error) {
+    console.error('Error in verifyEmail:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+/**
+ * @desc Resend verification email
+ * @route POST /api/users/resend-verification
+ * @access Public
+ */
+async function resendVerification(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.isVerified) return res.status(400).json({ error: 'Already verified' });
+
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    user.verificationToken = verificationToken;
+    user.verificationExpiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+    await user.save();
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(user.email)}`;
+    await sendVerificationEmail(user.email, verificationToken, verificationUrl);
+
+    res.json({ message: 'Verification email sent' });
+  } catch (error) {
+    console.error('Error in resendVerification:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+}

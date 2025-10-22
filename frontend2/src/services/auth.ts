@@ -20,3 +20,13 @@ export const fetchProfile = async (): Promise<User> => {
   const { data } = await apiClient.get<User>("/users/profile");
   return data;
 };
+
+export const verifyEmail = async (payload: { token: string; email: string }) => {
+  const { data } = await apiClient.get('/users/verify', { params: payload });
+  return data;
+};
+
+export const resendVerification = async (payload: { email: string }) => {
+  const { data } = await apiClient.post('/users/resend-verification', payload);
+  return data;
+};

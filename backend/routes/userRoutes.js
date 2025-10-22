@@ -15,12 +15,16 @@ const {
   updateUserSkill,
   deleteUserSkill,
   addUserSkillsBatch
+  , verifyEmail, resendVerification
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 // Public routes
 router.post('/signup', registerUser);
 router.post('/login', loginUser);
+// Email verification endpoints
+router.get('/verify', verifyEmail);
+router.post('/resend-verification', resendVerification);
 
 // Protected routes (require authentication)
 router.route('/profile')

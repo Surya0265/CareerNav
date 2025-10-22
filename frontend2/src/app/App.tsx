@@ -13,6 +13,8 @@ import { JobRecommendationsPage } from "../pages/JobRecommendations.tsx";
 import { YouTubeRecommendationsPage } from "../pages/YouTubeRecommendations.tsx";
 import { LoginPage } from "../pages/Login.tsx";
 import { SignupPage } from "../pages/Signup.tsx";
+import { VerificationSentPage } from "../pages/VerificationSent.tsx";
+import { VerifyEmailPage } from "../pages/VerifyEmail.tsx";
 import { ForgotPasswordPage } from "../pages/ForgotPassword.tsx";
 import { ResetPasswordPage } from "../pages/ResetPassword.tsx";
 import type { ReactElement } from "react";
@@ -62,6 +64,22 @@ const AppRouter = () => (
       element={
         <AuthLayout>
           <SignupPage />
+        </AuthLayout>
+      }
+    />
+    <Route
+      path="/verification-sent"
+      element={
+        <AuthLayout>
+          <VerificationSentPage />
+        </AuthLayout>
+      }
+    />
+    <Route
+      path="/verify-email"
+      element={
+        <AuthLayout>
+          <VerifyEmailPage />
         </AuthLayout>
       }
     />
