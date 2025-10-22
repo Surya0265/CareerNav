@@ -163,11 +163,45 @@ export const AnalysisPage = () => {
                   ) : null}
                   {phase.resources?.length ? (
                     <ul className="mt-3 space-y-2 text-xs text-blue-200">
-                      {phase.resources.map((resource, resourceIndex) => (
-                        <li key={`${phase.title ?? `phase-${index}`}-resource-${resourceIndex}`}>
-                          {resource.name ?? resource.type ?? "Resource"}
-                        </li>
-                      ))}
+                      {phase.resources.map((resource, resourceIndex) => {
+                        // Log for debugging - show EXACTLY what's in the resource
+                        if (resourceIndex === 0) {
+                          console.log('[ANALYSIS] First resource FULL DUMP:', resource);
+                          console.log('[ANALYSIS] First resource keys:', Object.keys(resource as any));
+                          console.log('[ANALYSIS] First resource .link:', (resource as any)?.link);
+                          console.log('[ANALYSIS] First resource .externalLink:', (resource as any)?.externalLink);
+                          console.log('[ANALYSIS] First resource .name:', (resource as any)?.name);
+                        }
+                        
+                        const href = (resource as any)?.link || (resource as any)?.externalLink;
+                        const displayName = (resource as any)?.name || (resource as any)?.title || resource?.type || (typeof resource === 'string' ? resource : 'Resource');
+                        const provider = (resource as any)?.provider;
+                        
+                        // Only render links that have valid https:// URLs
+                        if (!href || typeof href !== 'string' || !href.startsWith('http')) {
+                          console.log('[ANALYSIS] Skipping resource (no valid href):', { href, displayName });
+                          return (
+                            <li key={`${phase.title ?? `phase-${index}`}-resource-${resourceIndex}`}>
+                              <span>{displayName}</span>
+                              {provider && <span className="ml-2 text-xs text-slate-400">({provider})</span>}
+                            </li>
+                          );
+                        }
+                        
+                        return (
+                          <li key={`${phase.title ?? `phase-${index}`}-resource-${resourceIndex}`}>
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:text-white"
+                            >
+                              {displayName}
+                            </a>
+                            {provider && <span className="ml-2 text-xs text-slate-400">({provider})</span>}
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : null}
                 </div>

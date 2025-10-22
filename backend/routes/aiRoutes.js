@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { protect } = require('../middleware/authMiddleware');
 const User = require('../models/User');
+const LearningResource = require('../models/LearningResource');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -312,3 +313,33 @@ router.post('/skill-suggestions', protect, async (req, res) => {
 });
 
 module.exports = router;
+
+/**
+ * @desc    Get multiple LearningResource documents by comma-separated ids
+ * @route   GET /api/ai/learning-resources?ids=<id1,id2,...>
+ * @access  Private
+ */
+router.get('/learning-resources', protect, async (req, res) => {
+  try {
+    const idsParam = req.query.ids;
+    if (!idsParam) {
+      return res.status(400).json({ error: 'ids query parameter is required' });
+    }
+
+    const ids = String(idsParam)
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (!ids.length) {
+      return res.status(400).json({ error: 'No valid ids provided' });
+    }
+
+    const resources = await LearningResource.find({ _id: { $in: ids } });
+
+    res.json({ resources });
+  } catch (error) {
+    console.error('Error fetching learning resources:', error);
+    res.status(500).json({ error: 'Failed to fetch learning resources', details: error.message });
+  }
+});

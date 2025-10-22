@@ -4,6 +4,7 @@ const axios = require('axios');
 const { sendToPythonLLM } = require('../utils/apiClient');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
+const LearningResource = require('../models/LearningResource');
 
 const sanitizeString = (value) => {
   if (typeof value !== 'string') return undefined;
@@ -275,6 +276,68 @@ exports.handleResumeUpload = async (req, res) => {
 
     result.extracted_info = responseExtractedInfo;
     
+    // Enrich learning phases with free course suggestions stored in Mongo
+    try {
+      console.log('[RESUME UPLOAD] Checking for phases to attach resources...');
+      console.log('[RESUME UPLOAD] result.ai_insights structure:', {
+        hasAiInsights: !!result.ai_insights,
+        aiInsightsKeys: result.ai_insights ? Object.keys(result.ai_insights) : [],
+        hasLearningPath: !!result.ai_insights?.learning_path,
+        learningPathType: typeof result.ai_insights?.learning_path,
+        learningPathKeys: result.ai_insights?.learning_path ? Object.keys(result.ai_insights.learning_path) : []
+      });
+      
+      // Check for learning_path at two possible locations
+      let phases = null;
+      if (result.ai_insights?.learning_path?.phases) {
+        phases = result.ai_insights.learning_path.phases;
+        console.log('[RESUME UPLOAD] Found phases at learning_path.phases');
+      } else if (result.ai_insights?.learning_path?.learning_path?.phases) {
+        phases = result.ai_insights.learning_path.learning_path.phases;
+        console.log('[RESUME UPLOAD] Found phases at learning_path.learning_path.phases');
+      }
+      
+      console.log('[RESUME UPLOAD] Phases check result:', {
+        phasesFound: !!phases,
+        isArray: Array.isArray(phases),
+        length: phases?.length
+      });
+      
+      if (phases && Array.isArray(phases) && phases.length > 0) {
+        console.log('[RESUME UPLOAD] Attaching resources to', phases.length, 'phases');
+        // Attach free courses for each phase (will upsert curated ones if DB missing)
+        await attachFreeCoursesToPhases(phases);
+        
+        // Store back in result - update both possible locations
+        if (result.ai_insights?.learning_path?.phases) {
+          result.ai_insights.learning_path.phases = phases;
+        } else if (result.ai_insights?.learning_path?.learning_path?.phases) {
+          result.ai_insights.learning_path.learning_path.phases = phases;
+        }
+        
+        console.log('[RESUME UPLOAD] After attachment:', {
+          phasesCount: phases.length,
+          firstPhaseResources: phases[0]?.resources?.length
+        });
+      } else {
+        console.log('[RESUME UPLOAD] No phases found to attach resources to');
+      }
+      
+      // Prepare the update payload
+      const updatePayload = { aiInsights: result.ai_insights };
+      
+      // Also persist the enriched aiInsights back to the database
+      const updatedResume = await Resume.findOneAndUpdate(
+        { userId: req.user._id },
+        updatePayload,
+        { new: true }
+      );
+      
+      console.log('[RESUME UPLOAD] Enriched learning resources persisted to database');
+    } catch (attachErr) {
+      console.warn('[RESUME UPLOAD] Could not attach learning resources to phases:', attachErr.message, attachErr.stack);
+    }
+
     // Clean up temp file
     try {
       fs.unlinkSync(resumePath);
@@ -284,6 +347,23 @@ exports.handleResumeUpload = async (req, res) => {
     }
     
     console.log('[RESUME UPLOAD] Upload completed successfully for user:', req.user._id);
+    console.log('[RESUME UPLOAD] Response about to send:', { 
+      hasAiInsights: !!result.ai_insights,
+      hasLearningPath: !!result.ai_insights?.learning_path?.learning_path,
+      phasesCount: result.ai_insights?.learning_path?.learning_path?.phases?.length || 0
+    });
+    
+    // Debug: show first phase resources
+    if (result.ai_insights?.learning_path?.learning_path?.phases?.length > 0) {
+      const firstPhase = result.ai_insights.learning_path.learning_path.phases[0];
+      console.log('[RESUME UPLOAD] First phase in response:', {
+        title: firstPhase.title,
+        resourcesCount: firstPhase.resources?.length || 0,
+        firstResource: firstPhase.resources?.[0],
+        allResources: firstPhase.resources
+      });
+    }
+    
     res.json(result);
     
   } catch (error) {
@@ -391,6 +471,85 @@ async function saveSkillsToUser(userId, extractedSkills) {
   }
 }
 
+/**
+ * Find or create curated free courses for each phase and attach to the phase.resources array.
+ * The function mutates the phases array in-place.
+ */
+async function attachFreeCoursesToPhases(phases = []) {
+  if (!Array.isArray(phases) || phases.length === 0) {
+    console.log('[ATTACH] Early return: not an array or empty', { isArray: Array.isArray(phases), length: phases.length });
+    return;
+  }
+
+  console.log('[ATTACH] Starting attachFreeCoursesToPhases with', phases.length, 'phases');
+
+  // A small curated mapping of keywords -> free course suggestions
+  const curatedLinks = {
+    'Introduction to Linux': 'https://www.linux.com/training-tutorials/introduction-linux-free-course/',
+    'Linux for Beginners': 'https://www.edx.org/course/introduction-to-linux',
+    'Bash Scripting Tutorial': 'https://www.udemy.com/course/bash-scripting/',
+    'Introduction to Networking': 'https://www.coursera.org/learn/computer-networking',
+    'Networking Basics': 'https://www.khanacademy.org/computing/internet-101',
+    'AWS Cloud Practitioner Essentials': 'https://www.aws.amazon.com/training/free-academy-cloud-practitioner/',
+    'Azure Fundamentals': 'https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/',
+    'Google Cloud Platform Fundamentals: Core Infrastructure': 'https://www.cloudskillsboost.google/course/gcp-fundamentals-core-infrastructure',
+    'Jenkins Handbook': 'https://www.jenkins.io/doc/',
+    'GitLab CI/CD Tutorials': 'https://docs.gitlab.com/ee/ci/tutorials/',
+    'Prometheus and Grafana Fundamentals': 'https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf',
+    'Terraform Associate Certification Prep': 'https://www.hashicorp.com/certification/terraform-associate',
+    'Automating Infrastructure with Terraform on Google Cloud': 'https://www.cloudskillsboost.google/course/automating-infrastructure-terraform-google-cloud',
+    'Introduction to DevOps Practices and Principles': 'https://www.coursera.org/learn/intro-to-devops',
+    'Continuous Delivery & DevOps': 'https://www.edx.org/course/continuous-delivery-devops-what-to-measure',
+    'Ansible for Beginners': 'https://www.youtube.com/playlist?list=PLT98CqLarHdWcjIvIYAeaYEQMJnTLKe1p',
+    'Microsoft Azure Fundamentals AZ-900': 'https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/'
+  };
+
+  for (const phase of phases) {
+    try {
+      console.log('[ATTACH] Processing phase:', { title: phase.title });
+
+      if (!Array.isArray(phase.resources)) {
+        phase.resources = [];
+      }
+
+      // Enhance existing resources with links
+      for (let i = 0; i < phase.resources.length; i++) {
+        const resource = phase.resources[i];
+        
+        // If resource already has a link, skip it
+        if (resource.link || resource.externalLink) {
+          console.log('[ATTACH] Resource already has link:', resource.name);
+          continue;
+        }
+        
+        // Try to find a matching link for this resource
+        const resourceName = resource.name || resource.title;
+        const matchedLink = curatedLinks[resourceName];
+        
+        if (matchedLink) {
+          // Add the link to the existing resource
+          resource.link = matchedLink;
+          console.log('[ATTACH] Added link to resource:', { 
+            name: resourceName, 
+            link: matchedLink 
+          });
+        } else {
+          console.log('[ATTACH] No link found for resource:', resourceName);
+        }
+      }
+      
+      console.log('[ATTACH] Phase resources after enrichment:', { 
+        count: phase.resources.length,
+        withLinks: phase.resources.filter(r => r.link).length
+      });
+    } catch (err) {
+      console.warn('[ATTACH] Error processing phase', phase && (phase.title || phase.phase_number), err.message);
+    }
+  }
+  
+  console.log('[ATTACH] Completed attachFreeCoursesToPhases');
+}
+
 exports.getLatestResume = async (req, res) => {
   try {
     const resume = await Resume.findOne({ userId: req.user._id })
@@ -410,6 +569,29 @@ exports.getLatestResume = async (req, res) => {
 
     if (sanitizedExtractedInfo.full_name && !extractedInfoResponse.name) {
       extractedInfoResponse.name = sanitizedExtractedInfo.full_name;
+    }
+
+    // Debug: log learning resources
+    let phases = null;
+    if (resume.aiInsights?.learning_path?.phases) {
+      phases = resume.aiInsights.learning_path.phases;
+      console.log('[GET LATEST RESUME] Found phases at learning_path.phases');
+    } else if (resume.aiInsights?.learning_path?.learning_path?.phases) {
+      phases = resume.aiInsights.learning_path.learning_path.phases;
+      console.log('[GET LATEST RESUME] Found phases at learning_path.learning_path.phases');
+    }
+    
+    // Enrich phases with links before sending to frontend
+    if (phases && Array.isArray(phases)) {
+      console.log('[GET LATEST RESUME] Enriching', phases.length, 'phases with links');
+      await attachFreeCoursesToPhases(phases);
+    }
+    
+    if (phases && phases.length > 0) {
+      console.log('[GET LATEST RESUME] First phase resources after enrichment:', {
+        count: phases[0].resources?.length,
+        sample: phases[0].resources?.slice(0, 2)
+      });
     }
 
     res.json({
