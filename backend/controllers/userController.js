@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { hashPassword, matchPassword, generateToken } = require('../utils/auth/authUtils');
+const { validatePasswordStrength } = require('../utils/passwordValidator');
 
 const SKILL_LEVEL_MAP = {
   beginner: 'Beginner',
@@ -104,6 +105,19 @@ const registerUser = async (req, res) => {
     const { name, email, password } = req.body;
     console.log(`Registration attempt for email: ${email}`);
 
+    // Validate password strength before checking user existence
+    console.log('[PASSWORD VALIDATION] Checking password strength');
+    const passwordValidation = validatePasswordStrength(password);
+    
+    if (!passwordValidation.isValid) {
+      console.log('[PASSWORD VALIDATION] Password validation failed:', passwordValidation.errors);
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        details: passwordValidation.errors
+      });
+    }
+    console.log('[PASSWORD VALIDATION] Password meets security requirements');
+
     // Check if user exists
     const userExists = await User.findOne({ email });
 
@@ -122,10 +136,10 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      skills: {
-        technical: [],
-        soft: []
-      },
+      // `skills` is an array of skill objects in the User schema.
+      // Initialize as empty array to avoid validation errors like:
+      // "skills.0.name: Path `name` is required."
+      skills: [],
       preferences: {
         industries: [],
         jobInterests: [],

@@ -57,11 +57,13 @@ export const LoginPage = () => {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
+            className="pr-10"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
+            title={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (
               <EyeOff className="w-5 h-5" />

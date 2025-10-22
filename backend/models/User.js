@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { validatePasswordStrength } = require('../utils/passwordValidator');
 
 console.log('Defining User model schema');
 
@@ -23,7 +24,21 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Please add a password'],
-      minlength: 6,
+      minlength: [9, 'Password must be greater than 8 characters'],
+      validate: {
+        validator: function(password) {
+          // Only validate on initial password creation, not on other updates
+          if (this.isModified('password') || this.isNew) {
+            const validation = validatePasswordStrength(password);
+            return validation.isValid;
+          }
+          return true;
+        },
+        message: function() {
+          const validation = validatePasswordStrength(this.password);
+          return validation.errors.join(', ');
+        }
+      },
       select: false, // Don't return password in query results
     },
     passwordResetToken: {

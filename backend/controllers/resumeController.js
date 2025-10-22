@@ -121,26 +121,85 @@ const sanitizeExtractedInfo = (raw = {}) => {
 
 exports.handleResumeUpload = async (req, res) => {
   try {
+    // Validate file exists
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No file uploaded',
+        details: 'Please select a resume file to upload.'
+      });
+    }
+
     const resumePath = req.file.path;
-    console.log("FILE:", req.file);
-    console.log("Saved file path:", req.file.path);
+    
+    // Validate file size - defensive check
+    if (req.file.size === 0) {
+      fs.unlinkSync(resumePath);
+      return res.status(400).json({
+        error: 'Invalid file',
+        details: 'The uploaded file is empty. Please upload a valid resume.'
+      });
+    }
+
+    if (req.file.size > 10 * 1024 * 1024) {
+      fs.unlinkSync(resumePath);
+      return res.status(413).json({
+        error: 'File too large',
+        details: 'The file exceeds the 10MB size limit.'
+      });
+    }
+
+    console.log("[RESUME UPLOAD] FILE:", req.file);
+    console.log("[RESUME UPLOAD] Saved file path:", req.file.path);
 
     // Read file into buffer
-    const fs = require('fs');
     const fileData = fs.readFileSync(resumePath);
-    
+
     // Get dynamic data from frontend
     const industries = JSON.parse(req.body.industries || '[]');
     const goals = req.body.goals || '';
     const location = req.body.location || '';
 
-    const result = await sendToPythonLLM({
-      filePath: resumePath,
-      industries,
-      goals,
-      location,
-    });
+    // Try to extract - wrap in try/catch for corruption detection
+    let result;
+    try {
+      // Send the file buffer to the Python service instead of the file path.
+      // The Python service will process the uploaded stream without
+      // writing/deleting the same file on the shared uploads folder,
+      // preventing race conditions where Python removes the file before
+      // this process can clean it up.
+      result = await sendToPythonLLM({
+        fileData: fileData,
+        fileName: req.file.originalname || path.basename(resumePath),
+        industries,
+        goals,
+        location,
+      });
+      console.log('[RESUME UPLOAD] Python extraction successful (via buffer)');
+    } catch (extractionError) {
+      // Attempt to remove temp file if it still exists (defensive)
+      try {
+        if (fs.existsSync(resumePath)) fs.unlinkSync(resumePath);
+      } catch (e) {
+        console.warn('[RESUME UPLOAD] Could not delete temp file during extraction failure:', e.message);
+      }
+      console.error('[RESUME UPLOAD] Python extraction failed:', extractionError.message);
+      return res.status(422).json({
+        error: 'Corrupted or invalid file',
+        details: 'The file could not be parsed. Please ensure your resume is a valid PDF or Word document with readable text content.'
+      });
+    }
 
+    // Validate extraction result
+    if (!result || typeof result !== 'object') {
+      fs.unlinkSync(resumePath);
+      console.error('[RESUME UPLOAD] Invalid extraction result');
+      return res.status(422).json({
+        error: 'Processing failed',
+        details: 'The file could not be processed. Please try again with a different file.'
+      });
+    }
+
+    // Continue with normal processing
     const sanitizedExtractedInfo = sanitizeExtractedInfo(result.extracted_info);
     const extractedPersonalInfo = sanitizePersonalInfo(sanitizedExtractedInfo);
     const existingResume = await Resume.findOne({ userId: req.user._id });
@@ -148,7 +207,7 @@ exports.handleResumeUpload = async (req, res) => {
     // Extract and save skills if the user is authenticated
     if (req.user && req.user._id && result.skills) {
       await saveSkillsToUser(req.user._id, result.skills);
-      console.log(`Skills extracted and saved for user ${req.user._id}`);
+      console.log(`[RESUME UPLOAD] Skills extracted and saved for user ${req.user._id}`);
     }
 
     const preferencesPayload = {
@@ -219,15 +278,54 @@ exports.handleResumeUpload = async (req, res) => {
     // Clean up temp file
     try {
       fs.unlinkSync(resumePath);
-      console.log('Temp resume file deleted:', resumePath);
+      console.log('[RESUME UPLOAD] Temp resume file deleted:', resumePath);
     } catch (err) {
-      console.warn('Could not delete temp file:', err.message);
+      console.warn('[RESUME UPLOAD] Could not delete temp file:', err.message);
     }
     
+    console.log('[RESUME UPLOAD] Upload completed successfully for user:', req.user._id);
     res.json(result);
+    
   } catch (error) {
-    console.error('Resume processing error:', error.message);
-    res.status(500).json({ error: 'Processing failed' });
+    console.error('[RESUME UPLOAD] Resume processing error:', error.message);
+    
+    // Clean up file if it exists
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log('[RESUME UPLOAD] Cleaned up temp file after error');
+      } catch (err) {
+        console.warn('[RESUME UPLOAD] Could not delete temp file:', err.message);
+      }
+    }
+    
+    // Return error based on error type
+    if (error.message && error.message.includes('Unsupported file type')) {
+      return res.status(400).json({
+        error: 'Invalid file type',
+        details: 'Only PDF and Word documents (.pdf, .doc, .docx) are supported.'
+      });
+    }
+    
+    if (error.message && (error.message.includes('ENOENT') || error.message.includes('File not found'))) {
+      return res.status(400).json({
+        error: 'File error',
+        details: 'The file could not be found. Please try uploading again.'
+      });
+    }
+    
+    if (error.code === 'ECONNREFUSED' || error.message && error.message.includes('network')) {
+      return res.status(503).json({
+        error: 'Connection failed',
+        details: 'Could not connect to the processing service. Please try again later.'
+      });
+    }
+    
+    // Generic error for unexpected failures
+    return res.status(500).json({
+      error: 'Processing failed',
+      details: 'An unexpected error occurred. Please try uploading a different file.'
+    });
   }
 };
 

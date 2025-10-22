@@ -110,6 +110,27 @@ export const ResumeUploadPage = () => {
 
   const handleUpload = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    if (!file) {
+      push({
+        title: "No file selected",
+        description: "Please select a resume file to upload.",
+        tone: "error",
+      });
+      return;
+    }
+    
+    // Validate file before uploading
+    const validation = validateFile(file);
+    if (!validation.isValid) {
+      push({
+        title: "Invalid file",
+        description: validation.error,
+        tone: "error",
+      });
+      return;
+    }
+
     uploadMutation.mutate();
   };
 
@@ -119,6 +140,35 @@ export const ResumeUploadPage = () => {
   };
 
   const acceptedTypes = useMemo(() => ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"], []);
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  // Validate file before upload
+  const validateFile = (file: File): { isValid: boolean; error?: string } => {
+    // Check if file is empty
+    if (file.size === 0) {
+      return { isValid: false, error: "File is empty. Please upload a valid resume." };
+    }
+
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      return {
+        isValid: false,
+        error: `File is too large (${sizeMB}MB). Maximum size is 10MB.`,
+      };
+    }
+
+    // Check file type
+    if (!acceptedTypes.includes(file.type)) {
+      return {
+        isValid: false,
+        error: "Invalid file type. Please upload a PDF or Word document.",
+      };
+    }
+
+    return { isValid: true };
+  };
 
   const parseListInput = (input: string) =>
     input
