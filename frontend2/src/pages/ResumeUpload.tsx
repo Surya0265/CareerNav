@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { finalizeResume, uploadResume } from "../services/resume.ts";
 import type { ResumeUploadResponse } from "../types/resume.ts";
 import { Input } from "../components/shared/Input.tsx";
@@ -40,6 +40,7 @@ export const ResumeUploadPage = () => {
 
   const { push } = useToast();
   const { latestResume, setLatestResume } = useCareerData();
+  const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
     mutationFn: async (): Promise<ResumeUploadResponse> => {
@@ -54,6 +55,8 @@ export const ResumeUploadPage = () => {
     onSuccess: (data) => {
       console.log('Upload successful, data:', data);
       setLatestResume(data);
+      // Invalidate the latest-resume query to prevent AppLayout from refetching old data
+      queryClient.invalidateQueries({ queryKey: ["latest-resume"] });
       setStep("review");
       
       // Scroll to top to show the review section
@@ -95,6 +98,8 @@ export const ResumeUploadPage = () => {
       console.log('Finalize successful, response data:', data);
       console.log('AI Insights in response:', data.ai_insights);
       setLatestResume(data);
+      // Invalidate the latest-resume query to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["latest-resume"] });
       push({
         title: "Preferences saved",
         description: "We tailored the insights to your goals.",
@@ -396,6 +401,8 @@ export const ResumeUploadPage = () => {
                       setExperienceInput("");
                       setProjectsInput("");
                       setLatestResume(undefined);
+                      // Invalidate the query so it doesn't auto-refetch the old resume
+                      queryClient.invalidateQueries({ queryKey: ["latest-resume"] });
                       setStep("upload");
                     }}
                   >

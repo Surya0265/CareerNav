@@ -276,36 +276,18 @@ exports.handleResumeUpload = async (req, res) => {
 
     result.extracted_info = responseExtractedInfo;
     
-    // Enrich learning phases with free course suggestions stored in Mongo
+    // Enrich learning phases with free course suggestions
     try {
-      console.log('[RESUME UPLOAD] Checking for phases to attach resources...');
-      console.log('[RESUME UPLOAD] result.ai_insights structure:', {
-        hasAiInsights: !!result.ai_insights,
-        aiInsightsKeys: result.ai_insights ? Object.keys(result.ai_insights) : [],
-        hasLearningPath: !!result.ai_insights?.learning_path,
-        learningPathType: typeof result.ai_insights?.learning_path,
-        learningPathKeys: result.ai_insights?.learning_path ? Object.keys(result.ai_insights.learning_path) : []
-      });
-      
       // Check for learning_path at two possible locations
       let phases = null;
       if (result.ai_insights?.learning_path?.phases) {
         phases = result.ai_insights.learning_path.phases;
-        console.log('[RESUME UPLOAD] Found phases at learning_path.phases');
       } else if (result.ai_insights?.learning_path?.learning_path?.phases) {
         phases = result.ai_insights.learning_path.learning_path.phases;
-        console.log('[RESUME UPLOAD] Found phases at learning_path.learning_path.phases');
       }
       
-      console.log('[RESUME UPLOAD] Phases check result:', {
-        phasesFound: !!phases,
-        isArray: Array.isArray(phases),
-        length: phases?.length
-      });
-      
       if (phases && Array.isArray(phases) && phases.length > 0) {
-        console.log('[RESUME UPLOAD] Attaching resources to', phases.length, 'phases');
-        // Attach free courses for each phase (will upsert curated ones if DB missing)
+        // Attach free courses for each phase
         await attachFreeCoursesToPhases(phases);
         
         // Store back in result - update both possible locations
@@ -314,17 +296,7 @@ exports.handleResumeUpload = async (req, res) => {
         } else if (result.ai_insights?.learning_path?.learning_path?.phases) {
           result.ai_insights.learning_path.learning_path.phases = phases;
         }
-        
-        console.log('[RESUME UPLOAD] After attachment:', {
-          phasesCount: phases.length,
-          firstPhaseResources: phases[0]?.resources?.length
-        });
-      } else {
-        console.log('[RESUME UPLOAD] No phases found to attach resources to');
       }
-      
-      // Prepare the update payload
-      const updatePayload = { aiInsights: result.ai_insights };
       
       // Also persist the enriched aiInsights back to the database
       const updatedResume = await Resume.findOneAndUpdate(
@@ -506,8 +478,6 @@ async function attachFreeCoursesToPhases(phases = []) {
 
   for (const phase of phases) {
     try {
-      console.log('[ATTACH] Processing phase:', { title: phase.title });
-
       if (!Array.isArray(phase.resources)) {
         phase.resources = [];
       }
@@ -518,7 +488,6 @@ async function attachFreeCoursesToPhases(phases = []) {
         
         // If resource already has a link, skip it
         if (resource.link || resource.externalLink) {
-          console.log('[ATTACH] Resource already has link:', resource.name);
           continue;
         }
         
@@ -529,25 +498,12 @@ async function attachFreeCoursesToPhases(phases = []) {
         if (matchedLink) {
           // Add the link to the existing resource
           resource.link = matchedLink;
-          console.log('[ATTACH] Added link to resource:', { 
-            name: resourceName, 
-            link: matchedLink 
-          });
-        } else {
-          console.log('[ATTACH] No link found for resource:', resourceName);
         }
       }
-      
-      console.log('[ATTACH] Phase resources after enrichment:', { 
-        count: phase.resources.length,
-        withLinks: phase.resources.filter(r => r.link).length
-      });
     } catch (err) {
-      console.warn('[ATTACH] Error processing phase', phase && (phase.title || phase.phase_number), err.message);
+      console.warn('[ATTACH] Error processing phase:', err.message);
     }
   }
-  
-  console.log('[ATTACH] Completed attachFreeCoursesToPhases');
 }
 
 exports.getLatestResume = async (req, res) => {
@@ -571,27 +527,16 @@ exports.getLatestResume = async (req, res) => {
       extractedInfoResponse.name = sanitizedExtractedInfo.full_name;
     }
 
-    // Debug: log learning resources
+    // Enrich phases with links before sending to frontend
     let phases = null;
     if (resume.aiInsights?.learning_path?.phases) {
       phases = resume.aiInsights.learning_path.phases;
-      console.log('[GET LATEST RESUME] Found phases at learning_path.phases');
     } else if (resume.aiInsights?.learning_path?.learning_path?.phases) {
       phases = resume.aiInsights.learning_path.learning_path.phases;
-      console.log('[GET LATEST RESUME] Found phases at learning_path.learning_path.phases');
     }
     
-    // Enrich phases with links before sending to frontend
     if (phases && Array.isArray(phases)) {
-      console.log('[GET LATEST RESUME] Enriching', phases.length, 'phases with links');
       await attachFreeCoursesToPhases(phases);
-    }
-    
-    if (phases && phases.length > 0) {
-      console.log('[GET LATEST RESUME] First phase resources after enrichment:', {
-        count: phases[0].resources?.length,
-        sample: phases[0].resources?.slice(0, 2)
-      });
     }
 
     res.json({
@@ -661,15 +606,6 @@ exports.finalizeResume = async (req, res) => {
       location: normalizedPreferences.location,
     });
 
-    console.log('Analysis response:', { 
-      hasExtractedInfo: !!analysis.extracted_info,
-      hasDetectedSkills: !!analysis.extracted_info?.detected_skills,
-      skillsCount: analysis.extracted_info?.detected_skills?.length || 0,
-      hasAiInsights: !!analysis.ai_insights,
-      aiInsightsKeys: analysis.ai_insights ? Object.keys(analysis.ai_insights) : [],
-      careerRecsCount: analysis.ai_insights?.career_recommendations?.recommended_roles?.length || 0
-    });
-
     // Format skills for saveSkillsToUser function
     if (req.user && req.user._id && analysis.extracted_info && analysis.extracted_info.detected_skills) {
       const skillsByCategory = analysis.extracted_info.skills_by_category || {};
@@ -677,21 +613,10 @@ exports.finalizeResume = async (req, res) => {
         technical: skillsByCategory.technical_skills || skillsByCategory.technical || analysis.extracted_info.detected_skills,
         soft: skillsByCategory.soft_skills || skillsByCategory.soft || []
       };
-      console.log('Saving formatted skills:', { 
-        technicalCount: formattedSkills.technical?.length || 0,
-        softCount: formattedSkills.soft?.length || 0 
-      });
       await saveSkillsToUser(req.user._id, formattedSkills);
     }
 
     const sanitizedAnalysisInfo = sanitizeExtractedInfo(analysis.extracted_info);
-
-    console.log('Sanitized analysis info:', {
-      hasDetectedSkills: !!sanitizedAnalysisInfo.detected_skills,
-      detectedSkillsCount: sanitizedAnalysisInfo.detected_skills?.length || 0,
-      hasExperienceEntries: !!sanitizedAnalysisInfo.experience_entries,
-      experienceEntriesCount: sanitizedAnalysisInfo.experience_entries?.length || 0
-    });
 
     if (sectionUpdates.technicalSkills.length) {
       sanitizedAnalysisInfo.detected_skills = sectionUpdates.technicalSkills;
@@ -729,12 +654,6 @@ exports.finalizeResume = async (req, res) => {
       preferences: resume.preferences ?? {},
       ai_insights: resume.aiInsights ?? {},
     };
-
-    console.log('Finalize response being sent to frontend:', {
-      hasAiInsights: !!responsePayload.ai_insights,
-      aiInsightsKeys: Object.keys(responsePayload.ai_insights || {}),
-      careerRecsCount: responsePayload.ai_insights?.career_recommendations?.recommended_roles?.length || 0
-    });
 
     res.json(responsePayload);
   } catch (error) {
