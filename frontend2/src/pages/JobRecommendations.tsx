@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth.ts";
 import { fetchProfile } from "../services/auth.ts";
 import { getJobRecommendations } from "../services/jobs.ts";
-import type { Job, JobRecommendationsResponse } from "../types/jobs.ts";
+import type { Job } from "../types/jobs.ts";
 import { Card, CardContent, CardHeader } from "../components/shared/Card.tsx";
 import { EmptyState } from "../components/shared/EmptyState.tsx";
 import { Spinner } from "../components/shared/Spinner.tsx";
@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "../components/shared/Button.tsx";
 import { Input } from "../components/shared/Input.tsx";
 import { FormField } from "../components/shared/FormField.tsx";
 import { useToast } from "../components/shared/ToastContext.ts";
+import { JobRecommendationsContext } from "../app/providers/JobRecommendationsContext.ts";
 import { cn } from "../utils/cn.ts";
 
 type SearchMode = "upload" | "existing" | null;
@@ -22,11 +23,20 @@ export const JobRecommendationsPage = () => {
   const [searchMode, setSearchMode] = useState<SearchMode>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
+  const [country, setCountry] = useState("in");
+
+  const normalizeCountry = (c?: string) => {
+    if (!c) return "in";
+    const v = c.trim().toLowerCase();
+    // Simple mapping for common country names -> code; extend as needed
+    if (v === "india" || v === "in" || v === "ind") return "in";
+    return v;
+  };
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [jobsData, setJobsData] = useState<JobRecommendationsResponse | null>(null);
+  // Use shared context so job recommendations persist across navigation/refresh
+  const { jobsData, setJobsData } = useContext(JobRecommendationsContext);
 
   // Fetch fresh user data to ensure skills are loaded
   const { data: freshUser } = useQuery({
@@ -41,6 +51,22 @@ export const JobRecommendationsPage = () => {
       setUser(freshUser);
     }
   }, [freshUser, setUser]);
+
+  // When jobsData is restored from the provider (localStorage), initialize the
+  // filtered list so the results table shows up immediately after refresh.
+  useEffect(() => {
+    if (jobsData?.jobs) {
+      // Sort so jobs matching the requested city appear first
+      const sorted = [...jobsData.jobs].sort((a, b) => {
+        const aMatch = jobMatchesRequestedCity(a, city) ? 0 : 1;
+        const bMatch = jobMatchesRequestedCity(b, city) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+      setFilteredJobs(sorted);
+      setSelectedSkills(new Set());
+      setSearchQuery("");
+    }
+  }, [jobsData]);
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -58,12 +84,18 @@ export const JobRecommendationsPage = () => {
         type: "upload",
         resume: resumeFile,
         city,
-        country,
+        country: normalizeCountry(country),
       });
     },
     onSuccess: (data) => {
       setJobsData(data);
-      setFilteredJobs(data.jobs);
+      setFilteredJobs(
+        [...data.jobs].sort((a, b) => {
+          const aMatch = jobMatchesRequestedCity(a, city) ? 0 : 1;
+          const bMatch = jobMatchesRequestedCity(b, city) ? 0 : 1;
+          return aMatch - bMatch;
+        })
+      );
       setSelectedSkills(new Set());
       setSearchQuery("");
       push({
@@ -95,12 +127,18 @@ export const JobRecommendationsPage = () => {
       return getJobRecommendations({
         type: "existing",
         city,
-        country,
+        country: normalizeCountry(country),
       });
     },
     onSuccess: (data) => {
       setJobsData(data);
-      setFilteredJobs(data.jobs);
+      setFilteredJobs(
+        [...data.jobs].sort((a, b) => {
+          const aMatch = jobMatchesRequestedCity(a, city) ? 0 : 1;
+          const bMatch = jobMatchesRequestedCity(b, city) ? 0 : 1;
+          return aMatch - bMatch;
+        })
+      );
       setSelectedSkills(new Set());
       setSearchQuery("");
       push({
@@ -141,6 +179,15 @@ export const JobRecommendationsPage = () => {
     filterJobs(value, selectedSkills);
   };
 
+  // Helper: whether a job's location matches the requested city (substring, case-insensitive)
+  const jobMatchesRequestedCity = (job: Job, requestedCity?: string) => {
+    if (!requestedCity) return false;
+    const rc = requestedCity.trim().toLowerCase();
+    if (!rc) return false;
+    const raw = job.location || "";
+    return raw.toLowerCase().includes(rc);
+  };
+
   const toggleSkill = (skill: string) => {
     const newSkills = new Set(selectedSkills);
     if (newSkills.has(skill)) {
@@ -178,7 +225,13 @@ export const JobRecommendationsPage = () => {
       });
     }
 
-    setFilteredJobs(filtered);
+    // Sort filtered results so jobs matching requested city appear first
+    const sorted = [...filtered].sort((a, b) => {
+      const aMatch = jobMatchesRequestedCity(a, city) ? 0 : 1;
+      const bMatch = jobMatchesRequestedCity(b, city) ? 0 : 1;
+      return aMatch - bMatch;
+    });
+    setFilteredJobs(sorted);
   };
 
   const clearFilters = () => {
@@ -188,7 +241,7 @@ export const JobRecommendationsPage = () => {
   };
 
   const resetSearch = () => {
-    setJobsData(null);
+    setJobsData(undefined);
     setSearchMode(null);
     setFilteredJobs([]);
     setResumeFile(null);
@@ -308,7 +361,7 @@ export const JobRecommendationsPage = () => {
               <FormField label="City">
                 <Input
                   type="text"
-                  placeholder="e.g., Bangalore"
+                  placeholder="e.g., Chennai"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   required
@@ -569,7 +622,41 @@ export const JobRecommendationsPage = () => {
                           d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
-                      <span>{job.location}</span>
+                      <span>
+                        {(() => {
+                          const raw = job.location || "";
+                          const parts = raw
+                            .split(',')
+                            .map((p) => p.trim())
+                            .filter((p) => p && p.toLowerCase() !== 'null');
+
+                          const requestedCity = city?.trim();
+
+                          if (parts.length === 0) {
+                            // No location from job — fall back to requested city if provided
+                            return requestedCity || raw || "Location not specified";
+                          }
+
+                          if (requestedCity) {
+                            const lowerReq = requestedCity.toLowerCase();
+                            // Consider it a match if any part contains the requested city (substring match)
+                            const matchIndex = parts.findIndex((p) => p.toLowerCase().includes(lowerReq));
+                            if (matchIndex !== -1) {
+                              // If a country exists (last part) and is not the same as the requested city,
+                              // include it after the city for clarity.
+                              const country = parts.length > 1 ? parts[parts.length - 1] : undefined;
+                              if (country && !country.toLowerCase().includes(lowerReq)) {
+                                return `${requestedCity}, ${country}`;
+                              }
+                              return requestedCity;
+                            }
+                            // requested city not found in job location — show job location as-is
+                            return parts.join(", ");
+                          }
+
+                          return parts.join(", ");
+                        })()}
+                      </span>
                     </div>
 
 

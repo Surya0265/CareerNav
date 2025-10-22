@@ -6,20 +6,19 @@ import { Button } from "../components/shared/Button.tsx";
 import { Input } from "../components/shared/Input.tsx";
 import { FormField } from "../components/shared/FormField.tsx";
 import { Spinner } from "../components/shared/Spinner.tsx";
+import { useYouTubeRecommendations } from "../app/providers/YouTubeRecommendationsContext.ts";
 import {
   getYouTubeRecommendations,
-  type YouTubeRecommendationsResponse,
   type YouTubeVideo,
 } from "../services/youtube.ts";
 
 export const YouTubeRecommendationsPage = () => {
   const { push } = useToast();
+  const { youtubeData, setYouTubeData } = useYouTubeRecommendations();
 
   const [skillsInput, setSkillsInput] = useState("");
   const [targetJob, setTargetJob] = useState("");
   const [timeframeMonths, setTimeframeMonths] = useState("6");
-  const [recommendations, setRecommendations] =
-    useState<YouTubeRecommendationsResponse | null>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -49,7 +48,7 @@ export const YouTubeRecommendationsPage = () => {
       });
     },
     onSuccess: (data) => {
-      setRecommendations(data);
+      setYouTubeData(data);
       push({
         title: "Recommendations loaded!",
         description: "YouTube videos and career timeline ready",
@@ -72,7 +71,7 @@ export const YouTubeRecommendationsPage = () => {
     mutation.mutate();
   };
 
-  if (!recommendations) {
+  if (!youtubeData) {
     return (
       <div className="space-y-6">
         <div className="pb-6 border-b border-slate-800">
@@ -150,16 +149,16 @@ export const YouTubeRecommendationsPage = () => {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-grow">
             <h1 className="text-4xl font-bold text-blue-400 mb-3">
-              {recommendations.title}
+              {youtubeData.title}
             </h1>
             <p className="text-slate-400 text-sm max-w-3xl">
-              {recommendations.summary}
+              {youtubeData.summary}
             </p>
           </div>
           <Button
             variant="secondary"
             onClick={() => {
-              setRecommendations(null);
+              setYouTubeData(undefined);
               setSkillsInput("");
               setTargetJob("");
               setTimeframeMonths("6");
@@ -172,15 +171,15 @@ export const YouTubeRecommendationsPage = () => {
       </div>
 
       {/* YouTube Videos Section */}
-      {recommendations.youtube_resources && recommendations.youtube_resources.length > 0 && (
+      {youtubeData.youtube_resources && youtubeData.youtube_resources.length > 0 && (
         <Card>
           <CardHeader
             title="Recommended Learning Videos"
-            description={`${recommendations.youtube_resources.length} curated videos to help you get started`}
+            description={`${youtubeData.youtube_resources.length} curated videos to help you get started`}
           />
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recommendations.youtube_resources.map((video: YouTubeVideo, idx: number) => (
+              {youtubeData.youtube_resources.map((video: YouTubeVideo, idx: number) => (
                 <a
                   key={idx}
                   href={video.url}
@@ -284,7 +283,7 @@ export const YouTubeRecommendationsPage = () => {
       )}
 
       {/* Learning Tips Section */}
-      {recommendations.tips && recommendations.tips.length > 0 && (
+      {youtubeData.tips && youtubeData.tips.length > 0 && (
         <Card>
           <CardHeader
             title="Learning Tips"
@@ -292,7 +291,7 @@ export const YouTubeRecommendationsPage = () => {
           />
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {recommendations.tips.map((tip: string, idx: number) => (
+              {youtubeData.tips.map((tip: string, idx: number) => (
                 <div key={idx} className="flex gap-3 p-3 bg-slate-900/50 rounded-lg border border-slate-800">
                   <svg
                     className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5"

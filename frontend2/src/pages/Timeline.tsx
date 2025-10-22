@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { generateTimeline } from "../services/timeline.ts";
 import type { TimelineRequest, TimelineResponse } from "../types/timeline.ts";
@@ -97,6 +97,70 @@ export const TimelinePage = () => {
   const [selectedPhaseIndex, setSelectedPhaseIndex] = useState<number>(0);
   
   const selectedPhase = milestones[selectedPhaseIndex];
+  // container reference for exports (set by MermaidChart via onExportRef)
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // NOTE: downloadFile and extractNodeText removed — this page only offers
+  // a high-quality JPG export of the rendered Mermaid chart.
+
+  async function downloadSvgAsJpeg(container: HTMLDivElement | null, filename = 'career-roadmap.jpg', quality = 1.0) {
+    if (!container) return alert('Chart not ready');
+    const svgEl = container.querySelector('svg') as SVGSVGElement | null;
+    if (!svgEl) return alert('Chart SVG not available');
+
+    const serializer = new XMLSerializer();
+    let svgStr = serializer.serializeToString(svgEl);
+    if (!svgStr.match(/^<svg[^>]+xmlns="http/)) {
+      svgStr = svgStr.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    const rect = svgEl.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rect.width));
+    const height = Math.max(1, Math.round(rect.height));
+
+    return new Promise<void>((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const dpr = window.devicePixelRatio || 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          alert('Unable to create canvas');
+          resolve();
+          return;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // black background for JPG export (user requested)
+  ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            alert('Failed to create JPEG');
+            resolve();
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => {
+        alert('Failed to load SVG as image');
+        resolve();
+      };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -154,7 +218,7 @@ export const TimelinePage = () => {
                   <Spinner /> Generating
                 </span>
               ) : (
-                "Generate Milestone"
+                "Generate Timeline"
               )}
             </Button>
           </form>
@@ -174,7 +238,7 @@ export const TimelinePage = () => {
               <div className="space-y-2">
                 {milestones.map((phase, idx) => (
                   <button
-                    key={idx}
+                    key={phase.title}
                     onClick={() => setSelectedPhaseIndex(idx)}
                     className={`w-full text-left rounded-lg p-3 transition-colors ${
                       selectedPhaseIndex === idx
@@ -185,7 +249,7 @@ export const TimelinePage = () => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm truncate">
-                          {idx + 1}. {phase.title}
+                          {phase.title}
                         </p>
                         {phase.duration_weeks && (
                           <p className="text-xs text-slate-400 mt-1">
@@ -208,7 +272,7 @@ export const TimelinePage = () => {
                 {/* Phase Title and Description */}
                 <Card>
                   <CardHeader
-                    title={`${selectedPhaseIndex + 1}. ${selectedPhase.title}`}
+                    title={`${selectedPhase.title}`}
                     description={`${selectedPhase.duration_weeks} weeks`}
                   />
                   <CardContent>
@@ -222,13 +286,13 @@ export const TimelinePage = () => {
                 {selectedPhase.skills && selectedPhase.skills.length > 0 && (
                   <Card>
                     <CardHeader
-                      title="📚 Skills to Learn"
+                      title="Skills to Learn"
                       description={`${selectedPhase.skills.length} skills`}
                     />
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {selectedPhase.skills.map((skill, idx) => (
-                          <Badge key={idx} tone="default">
+                        {selectedPhase.skills.map((skill) => (
+                          <Badge key={`${selectedPhase.title}-skill-${skill}`} tone="default">
                             ✓ {skill}
                           </Badge>
                         ))}
@@ -241,13 +305,13 @@ export const TimelinePage = () => {
                 {selectedPhase.projects && selectedPhase.projects.length > 0 && (
                   <Card>
                     <CardHeader
-                      title="🔨 Projects to Build"
+                      title="Projects to Build"
                       description={`${selectedPhase.projects.length} projects`}
                     />
                     <CardContent>
                       <ul className="space-y-2">
-                        {selectedPhase.projects.map((project, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                        {selectedPhase.projects.map((project) => (
+                          <li key={`${selectedPhase.title}-project-${project}`} className="flex items-start gap-2 text-sm text-slate-300">
                             <span className="text-blue-400 mt-1">→</span>
                             <span>{project}</span>
                           </li>
@@ -261,13 +325,13 @@ export const TimelinePage = () => {
                 {selectedPhase.milestones && selectedPhase.milestones.length > 0 && (
                   <Card>
                     <CardHeader
-                      title="🎯 Milestones"
+                      title="Milestones"
                       description={`${selectedPhase.milestones.length} milestones`}
                     />
                     <CardContent>
                       <ul className="space-y-2">
-                        {selectedPhase.milestones.map((milestone, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                        {selectedPhase.milestones.map((milestone) => (
+                          <li key={`${selectedPhase.title}-milestone-${milestone}`} className="flex items-start gap-2 text-sm text-slate-300">
                             <span className="text-green-400 mt-1">✓</span>
                             <span>{milestone}</span>
                           </li>
@@ -317,7 +381,19 @@ export const TimelinePage = () => {
         <CardContent>
           {latestTimeline?.mermaid_chart ? (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 overflow-x-auto">
-              <MermaidChart chart={latestTimeline.mermaid_chart} />
+              {/* Download JPG only (high quality) */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white"
+                  onClick={async () => {
+                    await downloadSvgAsJpeg(chartContainerRef.current, 'career-roadmap.jpg', 1.0);
+                  }}
+                >
+                  Download Image
+                </button>
+              </div>
+
+              <MermaidChart chart={latestTimeline?.mermaid_chart || ''} onExportRef={(el) => (chartContainerRef.current = el)} />
             </div>
           ) : mutation.isPending ? (
             <div className="flex items-center justify-center py-20">

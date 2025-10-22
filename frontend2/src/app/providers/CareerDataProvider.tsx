@@ -6,8 +6,26 @@ import { CareerDataContext } from "./CareerDataContext.ts";
 import type { CareerDataContextValue } from "./CareerDataContext.ts";
 
 export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) => {
-  const [latestResume, setLatestResumeState] = useState<ResumeUploadResponse | undefined>();
-  const [latestTimeline, setLatestTimelineState] = useState<TimelineResponse | undefined>();
+  // Initialize state from localStorage to persist across refresh/navigation
+  const [latestResume, setLatestResumeState] = useState<ResumeUploadResponse | undefined>(() => {
+    try {
+      const raw = localStorage.getItem("career_latest_resume");
+      return raw ? (JSON.parse(raw) as ResumeUploadResponse) : undefined;
+    } catch (e) {
+      console.warn("CareerDataProvider: failed to parse stored resume", e);
+      return undefined;
+    }
+  });
+
+  const [latestTimeline, setLatestTimelineState] = useState<TimelineResponse | undefined>(() => {
+    try {
+      const raw = localStorage.getItem("career_latest_timeline");
+      return raw ? (JSON.parse(raw) as TimelineResponse) : undefined;
+    } catch (e) {
+      console.warn("CareerDataProvider: failed to parse stored timeline", e);
+      return undefined;
+    }
+  });
 
   const value = useMemo<CareerDataContextValue>(
     () => ({
@@ -19,6 +37,12 @@ export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) =>
           aiInsightsKeys: data?.ai_insights ? Object.keys(data.ai_insights) : []
         });
         setLatestResumeState(data);
+        try {
+          if (data) localStorage.setItem("career_latest_resume", JSON.stringify(data));
+          else localStorage.removeItem("career_latest_resume");
+        } catch (e) {
+          console.warn("CareerDataProvider: failed to persist resume", e);
+        }
       },
       latestTimeline,
       setLatestTimeline: (data?: TimelineResponse) => {
@@ -29,6 +53,12 @@ export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) =>
           fullData: JSON.stringify(data, null, 2)
         });
         setLatestTimelineState(data);
+        try {
+          if (data) localStorage.setItem("career_latest_timeline", JSON.stringify(data));
+          else localStorage.removeItem("career_latest_timeline");
+        } catch (e) {
+          console.warn("CareerDataProvider: failed to persist timeline", e);
+        }
       },
     }),
     [latestResume, latestTimeline]
