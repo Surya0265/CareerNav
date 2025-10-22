@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth.ts";
 import { Button } from "../shared/Button.tsx";
@@ -29,6 +29,7 @@ const navLinks = [
 export const AppLayout = () => {
   const { user, token, logout, setUser } = useAuth();
   const { setLatestResume, setLatestTimeline } = useCareerData();
+  const initialFetchDone = useRef(false);
 
   const handleLogout = () => {
     setLatestResume(undefined);
@@ -47,6 +48,7 @@ export const AppLayout = () => {
     queryFn: fetchLatestResume,
     enabled: Boolean(token),
     retry: false,
+    staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes
   });
 
   useEffect(() => {
@@ -55,17 +57,19 @@ export const AppLayout = () => {
     }
   }, [profileQuery.data, setUser]);
 
+  // Only sync resume data on initial mount, not on every query change
+  // This prevents the race condition where AppLayout refetches while user is on Replace Resume
   useEffect(() => {
-    if (resumeQuery.data === undefined) {
-      return;
+    // Only set on initial fetch, not on subsequent refetches
+    if (!initialFetchDone.current && resumeQuery.data !== undefined) {
+      initialFetchDone.current = true;
+      if (resumeQuery.data) {
+        setLatestResume(resumeQuery.data);
+      } else {
+        setLatestResume(undefined);
+      }
     }
-
-    if (resumeQuery.data) {
-      setLatestResume(resumeQuery.data);
-    } else {
-      setLatestResume(undefined);
-    }
-  }, [resumeQuery.data, setLatestResume]);
+  }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
     if (resumeQuery.error) {
