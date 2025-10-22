@@ -22,7 +22,8 @@ export const SignupPage = () => {
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login } = useAuth();
+  // don't auto-login until verification is complete
+  useAuth();
   const navigate = useNavigate();
   const { push } = useToast();
 
@@ -38,10 +39,10 @@ export const SignupPage = () => {
 
   const mutation = useMutation({
     mutationFn: () => signupRequest({ name, email, password }),
-    onSuccess: (data) => {
-      login(data, data.token);
-  push({ title: "Account created", description: "Let's build your roadmap!", tone: "success" });
-      navigate("/");
+    onSuccess: () => {
+      // After signup, redirect to verification sent page. Do not auto-login until verified.
+      push({ title: "Account created", description: "Verification email sent — please verify before signing in", tone: "success" });
+      navigate('/verification-sent', { state: { email } });
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Could not create account.";

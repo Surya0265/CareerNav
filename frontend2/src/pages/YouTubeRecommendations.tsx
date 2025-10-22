@@ -124,7 +124,13 @@ export const YouTubeRecommendationsPage = () => {
                 <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm text-slate-300">{rec.current_skills?.join?.(', ') || '—'}</div>
+                      <div className="text-sm text-slate-300">{(rec.current_skills && rec.current_skills.length > 0)
+                        ? rec.current_skills.map((s: any) => {
+                            if (!s && s !== 0) return 'Unnamed skill';
+                            if (typeof s === 'string') return s;
+                            return s.name || s.skill || s.label || (typeof s._id === 'string' ? `${s._id.slice(0,8)}...` : 'Unnamed skill');
+                          }).join(', ')
+                        : '—'}</div>
                       <div className="text-xs text-slate-500">{rec.target_job || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
                     </div>
                     <div className="flex gap-2">

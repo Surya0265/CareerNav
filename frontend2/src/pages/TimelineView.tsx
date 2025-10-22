@@ -178,14 +178,17 @@ export const TimelineView = () => {
                         />
                         <CardContent>
                           <div className="flex flex-wrap gap-2">
-                            {selected.skills.map((s: string, i: number) => (
-                              <div
-                                key={i}
-                                className="px-2 py-1 bg-slate-800 rounded text-xs"
-                              >
-                                ✓ {s}
-                              </div>
-                            ))}
+                            {selected.skills.map((s: any, i: number) => {
+                              const label = !s && s !== 0 ? 'Unnamed skill' : (typeof s === 'string' ? s : (s.name || (typeof s._id === 'string' ? `${s._id.slice(0,8)}...` : 'Unnamed skill')));
+                              return (
+                                <div
+                                  key={i}
+                                  className="px-2 py-1 bg-slate-800 rounded text-xs"
+                                >
+                                  ✓ {label}
+                                </div>
+                              );
+                            })}
                           </div>
                         </CardContent>
                       </Card>

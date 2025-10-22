@@ -23,7 +23,7 @@ export const LoginPage = () => {
     onSuccess: (data) => {
       login(data, data.token);
   push({ title: "Welcome back", description: "Let's keep the momentum going!", tone: "success" });
-      navigate("/");
+      navigate("/dashboard");
     },
     onError: (error: unknown) => {
       const message =

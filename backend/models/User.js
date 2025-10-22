@@ -49,6 +49,19 @@ const UserSchema = new mongoose.Schema(
       type: Date,
       select: false, // Don't return expiry in query results
     },
+    // Email verification fields
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verificationToken: {
+      type: String,
+      select: false
+    },
+    verificationExpiry: {
+      type: Date,
+      select: false
+    },
     skills: [
       {
         name: { type: String, required: true },
