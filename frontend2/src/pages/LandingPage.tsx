@@ -7,7 +7,7 @@ import { Badge } from "../components/shared/Badge.tsx";
 import {
   Brain,
   Target,
-  TrendingUp,
+  Youtube,
   Users,
   ArrowRight,
   Menu,
@@ -37,14 +37,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       description: "Get matched with roles that fit your skills, experience, and career aspirations.",
     },
     {
-      icon: TrendingUp,
-      title: "Live Market Trends",
-      description: "Stay updated with real-time job market insights and emerging skill demands.",
+      icon: Youtube,
+      title: "YouTube Learning",
+      description: "Role-focused video paths and quick tutorials to help you learn the exact skills employers ask for.",
     },
     {
       icon: Users,
       title: "Expert Content",
-      description: "Access curated podcasts, articles, and learning resources from industry experts.",
+      description: "Curated plans and projects to close the skill gaps in your resume.",
     },
   ];
 
@@ -60,10 +60,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-primary-foreground" />
+                <div className="flex items-center space-x-3">
+                  <img src="/careernav.svg" alt="CareerNav" className="h-8 w-auto" />
+                  <span className="text-lg font-semibold text-white">CareerNav</span>
                 </div>
-                <span className="text-xl text-foreground">CareerNav</span>
               </div>
             </div>
 
@@ -131,16 +131,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               </div>
               <div className="mt-8 flex items-center space-x-8">
                 <div className="text-center">
-                  <div className="text-2xl text-foreground mb-1">50K+</div>
-                  <div className="text-sm text-muted-foreground">Careers Launched</div>
+                  <div className="text-2xl text-foreground mb-1">Extensive</div>
+                  <div className="text-sm text-muted-foreground">Profiles coverage across domains</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl text-foreground mb-1">95%</div>
-                  <div className="text-sm text-muted-foreground">Success Rate</div>
+                  <div className="text-2xl text-foreground mb-1">Reliable</div>
+                  <div className="text-sm text-muted-foreground">High match confidence for recommendations</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl text-foreground mb-1">500+</div>
-                  <div className="text-sm text-muted-foreground">Companies</div>
+                  <div className="text-2xl text-foreground mb-1">Curated</div>
+                  <div className="text-sm text-muted-foreground">Handpicked learning resources and pathways</div>
                 </div>
               </div>
             </div>
@@ -195,10 +195,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-primary-foreground" />
+                <div className="flex items-center space-x-3 mb-4">
+                  <img src="/careernav.svg" alt="CareerNav" className="h-8 w-auto" />
+                  <span className="text-lg font-semibold text-white">CareerNav</span>
                 </div>
-                <span className="text-xl text-white">CareerNav</span>
               </div>
               <p className="text-white">AI-powered career navigation for the next generation of professionals.</p>
             </div>
