@@ -1,204 +1,236 @@
 # CareerNav
 
-A comprehensive career navigation system that helps users analyze resumes, generate career timelines, create career plans with visual flowcharts, and find job opportunities based on their skills.
+CareerNav is an open-source career navigation platform that helps users analyze resumes, extract skills, plan career timelines, receive job recommendations, and find learning resources — all in one place. The project combines a modern React + TypeScript frontend, a Node/Express backend with MongoDB, and optional Python helpers for AI/ML integrations.
 
-## API Documentation
+This README provides a detailed description of the project, its purpose, architecture, directory layout, developer run instructions, API highlights, and deployment notes.
 
-### Base URL
+---
+
+## Table of contents
+
+- Project summary
+- Architecture & technology stack
+- Full directory structure
+- Main features and user flows
+- Running the project locally (frontend and backend)
+- Environment variables and configuration
+- Key files and responsibilities
+- API endpoints overview
+- Inferred database entities and relationships
+- Testing, linting, and scripts
+- Deployment and production notes
+- Contributing
+
+---
+
+## Project summary
+
+CareerNav aims to give job seekers actionable career guidance by combining resume parsing, structured skill extraction, AI-backed career plan generation, timeline creation, and job/learning recommendations. The platform stores user resumes, detected skills, and saved timelines, and provides authenticated pages (dashboard, resume upload, jobs, timeline) along with public landing and auth pages.
+
+---
+
+## Architecture & technology stack
+
+- Frontend: React + TypeScript (Vite), Tailwind CSS, React Router, React Query
+- Backend: Node.js + Express, MongoDB (Mongoose models), middleware for auth and file uploads
+- Optional Python helpers: `backend/utils/*.py` — used for certain AI/ML workflows (Gemini helpers)
+- Storage: uploaded resumes stored locally under `backend/uploads/` by default; can be swapped for cloud object storage
+- Third-party integrations: YouTube Data API, email/SMS providers, AI APIs
+
+---
+
+## Full directory structure
+
+Top-level view (important files and folders):
+
 ```
-http://localhost:3000/api
-```
-
-### 1. Timeline API Endpoints
-
-#### 1.1. Generate Career Timeline
-Generates a timeline of learning resources and milestones for a career path.
-
-**Endpoint:** `POST /timeline/generate-timeline`
-
-**Request:**
-```json
-{
-  "current_skills": ["JavaScript", "HTML", "CSS"],
-  "target_job": "Full Stack Developer",
-  "timeframe_months": 6,
-  "additional_context": {
-    "preferred_learning_style": "project-based",
-    "focus_area": "MERN stack"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "timeline": [
-    {
-      "phase": "Foundation Building (Months 1-2)",
-      "description": "Focus on strengthening JavaScript fundamentals and learning React",
-      "skills": ["Advanced JavaScript", "React", "Git"],
-      "resources": [
-        {
-          "title": "Modern JavaScript From The Beginning",
-          "url": "https://www.youtube.com/watch?v=hdI2bqOjy3c",
-          "type": "YouTube",
-          "duration": "1:48:17"
-        }
-        // More resources
-      ]
-    }
-    // More phases
-  ],
-  "summary": "This 6-month learning path will help you transition from frontend basics to a full stack developer role"
-}
-```
-
-#### 1.2. Generate Career Plan with Mermaid Flowchart
-Generates a detailed career plan with a visual Mermaid flowchart.
-
-**Endpoint:** `POST /timeline/generate-plan`
-
-**Request:**
-```json
-{
-  "current_skills": ["Python", "SQL", "Data Analysis"],
-  "target_job": "Data Scientist",
-  "timeframe_months": 9
-}
-```
-
-**Response:**
-```json
-{
-  "plan": "# Career Transition Plan: From Data Analysis to Data Scientist\n\n## Overview\nThis 9-month plan will help you transition...",
-  "mermaid_code": "flowchart TD\n  A[Current Skills: Python, SQL, Data Analysis] --> B[Foundation: Statistics & ML Theory]\n  B --> C[Applied Machine Learning]\n  C --> D[Portfolio Projects]\n  D --> E[Job Preparation]\n  E --> F[Data Scientist]\n\n  style A fill:#f9f,stroke:#333,stroke-width:2px\n  style F fill:#bbf,stroke:#333,stroke-width:2px",
-  "full_response": {
-    // Additional details returned by the API
-  }
-}
+CareerNav/
+├─ backend/                        # API server, controllers, models, routes
+│  ├─ controllers/                 # Controller logic (resumeController, jobController, etc.)
+│  ├─ models/                      # Mongoose model definitions
+│  ├─ routes/                      # Express route files (aiRoutes.js, jobRoutes.js...)
+│  ├─ utils/                       # Helpers (resume_extractor.py, gemini_service.py, emailService.js)
+│  ├─ config/                      # Config and DB connection helpers
+│  ├─ uploads/                     # Runtime uploads (resumes)
+│  ├─ server.js / app.py           # Backend server entrypoints
+│  └─ package.json
+├─ frontend2/                      # Main modern frontend (Vite + TS)
+│  ├─ public/                      # Static assets (logos, favicon)
+│  ├─ src/
+│  │  ├─ app/                      # App bootstrap, providers (AppProviders)
+│  │  ├─ components/               # Reusable UI components and layout
+│  │  ├─ pages/                    # Route pages (Landing, Login, Dashboard, Resume, Jobs, Timeline)
+│  │  ├─ services/                 # Frontend API clients and helpers
+│  │  ├─ hooks/                    # Custom hooks (useAuth, providers)
+│  │  └─ styles/                   # Tailwind and global CSS
+│  └─ package.json
+├─ frontend/                       # Legacy frontend (kept for reference)
+├─ scripts/                        # Developer utilities (generate_use_cases.js)
+├─ docs/                           # Optional: docs, schema files
+├─ LICENSE
+└─ README.md
 ```
 
-### 2. Resume API Endpoints
+Notes:
+- `frontend2` is the active UI; `frontend` is legacy/archival and may contain older code.
+- `backend/utils/` contains AI/ML helper scripts — review carefully before running in production.
 
-#### 2.1. Resume Upload and Analysis
-Uploads a resume and processes it to extract information and provide career recommendations.
+---
 
-**Endpoint:** `POST /resume/upload`
+## Main features and user flows
 
-**Request:**
-- Content-Type: `multipart/form-data`
-- Form Fields:
-  - `resume`: PDF or DOCX file
-  - `industries`: JSON array of preferred industries (e.g., `["Technology", "Finance"]`)
-  - `goals`: String describing career goals
-  - `location`: Preferred location for job search
+1. Authentication
+   - Sign up, verify email, log in, forgot/reset password. Uses JWT tokens for protected routes.
 
-Example curl command:
-```bash
-curl -X POST http://localhost:3000/api/resume/upload \
-  -F "resume=@path/to/your/resume.pdf" \
-  -F "industries=[\"Technology\", \"Finance\"]" \
-  -F "goals=Looking for a senior developer role" \
-  -F "location=New York"
+2. Resume upload & parsing
+   - Users upload resumes; backend extracts structured information (skills, contacts, sections) and returns parsed data for user validation.
+
+3. Skill management & normalization
+   - Extracted skills are normalized and saved to a central skills collection; user can edit or remove detected skills.
+
+4. Job recommendations
+   - Recommendations are generated based on saved skills or resume content — returned as ranked job lists with scores.
+
+5. AI-driven career planning
+   - Uses AI helpers to generate a timeline/plan (milestones, learning resources) and returns visual Mermaid code for flowcharts.
+
+6. Timeline management
+   - Users create, save, and complete timeline plans and timeline items (milestones). Plans may be regenerated by AI.
+
+7. Bookmarks & learning resources
+   - Save jobs and learning resources (including YouTube videos) and later access/bookmark them.
+
+8. Analytics
+   - Track user events (optional) for product insights.
+
+---
+
+## Running the project locally
+
+Prerequisites:
+- Node 16+ and npm
+- MongoDB (local or Atlas)
+- (Optional) Python 3.9+ for AI helper scripts
+
+Backend (recommended steps):
+
+1. Create a `.env` file inside `backend/` with required variables (example below).
+2. Install dependencies and run the server:
+
+```powershell
+cd backend
+npm install
+npm run dev
 ```
 
-**Response:**
-```json
-{
-  "summary": "Resume processed successfully with AI analysis",
-  "extracted_info": {
-    "text_length": 2548,
-    "email": "example@email.com",
-    "phone": "123-456-7890",
-    "detected_skills": ["JavaScript", "React", "Node.js", "SQL"],
-    "skills_by_category": {
-      "programming_languages": ["JavaScript", "Python"],
-      "frameworks": ["React", "Express"],
-      "databases": ["SQL", "MongoDB"]
-    },
-    "total_skills_found": 15,
-    "has_experience_keywords": true,
-    "has_education_keywords": true
-  },
-  "preferences": {
-    "industries": ["Technology", "Finance"],
-    "goals": "Looking for a senior developer role",
-    "location": "New York"
-  },
-  "ai_insights": {
-    "career_recommendations": {
-      "recommended_roles": [
-        {
-          "title": "Senior Frontend Developer",
-          "match_score": 85,
-          "description": "..."
-        }
-        // More recommended roles
-      ]
-    },
-    "skill_improvements": {
-      "missing_skills": ["TypeScript", "AWS"],
-      "upgrade_suggestions": [
-        {
-          "skill": "TypeScript",
-          "reason": "Growing demand in frontend roles"
-        }
-        // More suggestions
-      ]
-    },
-    "resume_analysis": {
-      "strengths": ["Strong technical skills", "Project experience"],
-      "gaps": ["Leadership experience", "Enterprise experience"],
-      "improvement_suggestions": [
-        "Add metrics to demonstrate impact",
-        "Highlight team collaboration"
-      ]
-    },
-    "learning_path": {
-      "path_name": "Senior Frontend Developer Path",
-      "total_duration": "3 months",
-      "phases": [
-        {
-          "phase_number": 1,
-          "title": "Advanced Frontend Skills",
-          "duration": "4 weeks",
-          "skills": ["TypeScript", "Performance Optimization"],
-          "resources": [
-            {
-              "type": "course",
-              "name": "TypeScript Deep Dive",
-              "provider": "Frontend Masters",
-              "duration": "8 hours",
-              "cost": "Subscription"
-            }
-          ]
-        }
-        // More phases
-      ]
-    }
-  }
-}
+Frontend (recommended steps):
+
+```powershell
+cd frontend2
+npm install
+npm run dev
 ```
 
-### 3. Jobs API Endpoints
+Open the frontend at the Vite URL shown in the terminal (commonly http://localhost:5173) and ensure `VITE_API_BASE` points to your backend.
 
-#### 3.1. Get Job Recommendations Based on Resume
-Uploads a resume, extracts skills, and returns relevant job listings.
+---
 
-**Endpoint:** `POST /jobs/jobs-by-resume`
+## Environment variables (example)
 
-**Request:**
-- Content-Type: `multipart/form-data`
-- Form Fields:
-  - `resume`: PDF or DOCX file
-  - `city`: Target city for job search (required)
-  - `country`: Country code (default: 'us')
+Place these in `backend/.env` for development:
 
-Example curl command:
-```bash
-curl -X POST http://localhost:3000/api/jobs/jobs-by-resume \
-  -F "resume=@path/to/your/resume.pdf" \
-  -F "city=San Francisco" \
+```
+MONGO_URI=mongodb://localhost:27017/careernav
+JWT_SECRET=your_jwt_secret
+PORT=4000
+EMAIL_HOST=smtp.example.com
+EMAIL_USER=foo
+EMAIL_PASS=bar
+YOUTUBE_API_KEY=your_key
+```
+
+Frontend environment variables (frontend2/.env):
+
+```
+VITE_API_BASE=http://localhost:4000/api
+```
+
+---
+
+## Key files and responsibilities
+
+- `backend/routes/` — groups of related endpoints (auth, resume, jobs, timeline, youtube, ai)
+- `backend/controllers/` — core request handling business logic
+- `backend/models/` — Mongoose schemas and model responsibilities
+- `frontend2/src/app/App.tsx` — route registration and protected-route logic
+- `frontend2/src/components/layout/AppLayout.tsx` — the main app layout (sidebar + header)
+- `frontend2/src/pages/` — page-level components (Dashboard, ResumeUpload, JobRecommendations, Timeline)
+- `scripts/generate_use_cases.js` — scans project to auto-generate use-case documentation
+
+---
+
+## API endpoints overview (high-level)
+
+The backend exposes several grouped endpoints (check `backend/routes` for exact names):
+
+- Auth: `/user/signup`, `/user/login`, `/user/verify`, `/user/forgot-password`, `/user/reset-password`
+- Resume: `/resume/upload`, `/resume/latest`, `/resume/finalize`
+- Skills: `/skills/extract`, `/skills`, `/skills/:skillId`
+- Jobs: `/jobs-by-resume`, `/jobs-by-skills`, `/jobs-search`
+- AI: `/analyze-resume`, `/analyze-existing` (under ai routes)
+- Timeline: `/timeline/generate-plan`, `/timeline/:id`, `/timeline/complete-phase`
+- YouTube: `/youtube/recommendations`
+
+Protected endpoints require Authorization header with a valid Bearer JWT token.
+
+---
+
+## Inferred database entities and relationships (summary)
+
+Primary entities: `User`, `Resume`, `Skill`, `ResumeSkill` (join), `Job`, `JobRecommendation`, `Bookmark`, `TimelinePlan`, `TimelineItem`, `LearningResource`, `YouTubeRecommendation`, `Analytics`, `Content`.
+
+Key relationships:
+- `User 1 -- * Resume`
+- `Resume * -- * Skill` (via `ResumeSkill` join)
+- `User 1 -- * JobRecommendation`
+- `JobRecommendation * -- 1 Job`
+- `User 1 -- * Bookmark`
+- `User 1 -- * TimelinePlan`, `TimelinePlan 1 -- * TimelineItem`
+
+Note: A more detailed ER diagram can be generated using the included scripts or by consulting `backend/models`.
+
+---
+
+## Testing, linting, and developer scripts
+
+- `frontend2`: `npm run dev`, `npm run build`, `npm test` (if tests are present)
+- `backend`: `npm run dev`, `npm test` (if tests exist)
+- `scripts/generate_use_cases.js`: generate `USE_CASES.md` by scanning frontend and backend routes
+
+Consider adding a root-level script to orchestrate starting both services for convenience (e.g., using `concurrently`).
+
+---
+
+## Deployment notes
+
+- Use a managed MongoDB instance (Atlas) in production.
+- Build and host the frontend on a static site host (Netlify, Vercel) or serve from the backend.
+- Containerize the backend (Docker) and deploy with environment variables securely stored.
+
+---
+
+## Contributing
+
+- Create feature branches from `main`.
+- Add tests and run linters before PR. Document breaking changes in PR descriptions.
+
+---
+
+If you want I can:
+- Generate `docs/schema.puml` or `docs/schema.sql` from the inferred schema and add it to `docs/`.
+- Add convenience npm scripts to start frontend and backend concurrently from the repo root.
+
+Last updated: October 23, 2025
   -F "country=us"
 ```
 
