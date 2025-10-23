@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 const navLinks = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/resume", label: "Resume Upload", icon: FileText },
   { to: "/analysis", label: "AI Analysis", icon: BrainCircuit },
   { to: "/timeline", label: "Career Timeline", icon: Calendar },
@@ -82,13 +82,14 @@ export const AppLayout = () => {
       <div className="flex min-h-screen w-full">
         <aside className="sticky top-0 h-screen hidden w-64 flex-col border-r border-slate-800 bg-slate-950/80 p-6 md:flex overflow-y-auto">
           <div className="mb-8 space-y-1">
-            <p className="text-xs uppercase tracking-widest text-blue-400">
-              CareerNav
-            </p>
-            <h1 className="text-xl font-semibold text-white">Growth Hub</h1>
-            <p className="text-xs text-slate-400">
-              Plan, learn, and track your career journey.
-            </p>
+            <div className="flex items-center gap-3">
+              <img src="/careernav.svg" alt="CareerNav" className="h-8 w-auto" />
+              <div>
+                <p className="text-xs uppercase tracking-widest text-blue-400">CareerNav</p>
+                <h1 className="text-xl font-semibold text-white">Growth Hub</h1>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">Plan, learn, and track your career journey.</p>
           </div>
           <nav className="flex flex-1 flex-col gap-2">
             {navLinks.map((link) => {

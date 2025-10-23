@@ -124,20 +124,16 @@ export const ResetPasswordPage = () => {
   // Show error if token is invalid
   if (!tokenValid) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 px-4">
-        <div className="w-full max-w-md rounded-lg bg-slate-800 p-8 shadow-xl">
-          <div className="mb-6 flex justify-center">
-            <AlertCircle className="h-12 w-12 text-red-500" />
-          </div>
-          <h1 className="mb-2 text-center text-2xl font-bold text-white">
-            Invalid Link
-          </h1>
-          <p className="mb-6 text-center text-slate-400">
-            This password reset link has expired or is invalid. Please request a new one.
-          </p>
+      <div className="max-w-xl mx-auto text-center py-12">
+        <div className="mb-4 flex justify-center">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+        </div>
+        <h1 className="mb-2 text-2xl font-bold">Invalid Link</h1>
+        <p className="mb-6 text-sm text-slate-600">This password reset link has expired or is invalid. Please request a new one.</p>
+        <div className="flex gap-3 justify-center">
           <button
             onClick={() => navigate("/forgot-password")}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 transition-colors"
+            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 transition-colors"
           >
             Request New Reset Link
           </button>
@@ -149,93 +145,72 @@ export const ResetPasswordPage = () => {
   // Show success state
   if (resetMutation.isSuccess) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 px-4">
-        <div className="w-full max-w-md rounded-lg bg-slate-800 p-8 shadow-xl">
-          <div className="mb-6 flex justify-center">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-          </div>
-          <h1 className="mb-2 text-center text-2xl font-bold text-white">
-            Password Reset
-          </h1>
-          <p className="mb-6 text-center text-slate-400">
-            Your password has been successfully reset. You will be redirected to the login page.
-          </p>
-          <div className="flex items-center justify-center">
-            <Spinner />
-          </div>
+      <div className="max-w-xl mx-auto text-center py-12">
+        <div className="mb-4 flex justify-center">
+          <CheckCircle className="h-12 w-12 text-green-500" />
+        </div>
+        <h1 className="mb-2 text-2xl font-bold">Password Reset</h1>
+        <p className="mb-6 text-sm text-slate-600">Your password has been successfully reset. You will be redirected to the login page.</p>
+        <div className="flex items-center justify-center">
+          <Spinner />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Reset Password</h1>
-          <p className="mt-2 text-slate-400">
-            Enter your new password below.
-          </p>
-        </div>
+    <div className="max-w-xl mx-auto text-center py-12">
+      <h1 className="text-2xl font-semibold mb-2">Reset Password</h1>
+      <p className="text-sm text-slate-600 mb-6">Enter your new password below to update your account credentials.</p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-lg bg-slate-800 p-8 shadow-xl"
-        >
-          <FormField label="New Password" description="Must be at least 8 characters">
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter new password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                disabled={isResetting}
-                className="pr-10"
-                minLength={8}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </FormField>
+      <form onSubmit={handleSubmit} className="space-y-4 text-left">
+        <FormField label="New Password" description="Must be at least 8 characters">
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              disabled={isResetting}
+              className="pr-10"
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+        </FormField>
 
-          <FormField label="Confirm Password">
-            <div className="relative">
-              <Input
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={isResetting}
-                className="pr-10"
-                minLength={8}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </FormField>
+        <FormField label="Confirm Password">
+          <div className="relative">
+            <Input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isResetting}
+              className="pr-10"
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+        </FormField>
 
-          {newPassword && confirmPassword && newPassword !== confirmPassword && (
-            <p className="mb-4 text-sm text-red-500">Passwords do not match</p>
-          )}
+        {newPassword && confirmPassword && newPassword !== confirmPassword && (
+          <p className="text-sm text-red-500">Passwords do not match</p>
+        )}
 
+        <div className="flex gap-3 justify-center">
           <Button
             type="submit"
             disabled={
@@ -246,7 +221,6 @@ export const ResetPasswordPage = () => {
               newPassword !== confirmPassword ||
               newPassword.length < 8
             }
-            className="mb-4 w-full"
           >
             {resetMutation.isPending || isResetting ? (
               <span className="flex items-center gap-2">
@@ -258,24 +232,24 @@ export const ResetPasswordPage = () => {
             )}
           </Button>
 
-          {resetMutation.isError && (
-            <div className="rounded-lg bg-red-500/10 p-4 text-red-500 text-sm">
-              {resetMutation.error instanceof Error
-                ? resetMutation.error.message
-                : "Failed to reset password. Please try again."}
-            </div>
-          )}
-        </form>
-
-        <div className="mt-4 text-center">
           <button
             onClick={() => navigate("/login")}
             className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            type="button"
           >
             Back to Sign In
           </button>
         </div>
-      </div>
+
+        {resetMutation.isError && (
+          <div className="rounded-lg bg-red-500/10 p-4 text-red-500 text-sm">
+            {resetMutation.error instanceof Error
+              ? resetMutation.error.message
+              : "Failed to reset password. Please try again."}
+          </div>
+        )}
+      </form>
     </div>
   );
+
 };

@@ -361,7 +361,7 @@ export const JobRecommendationsPage = () => {
           {/* Option 1: Upload New Resume */}
           <Card className="cursor-pointer transition-all hover:border-blue-500/60 hover:bg-slate-900/80">
             <CardHeader
-              title="📄 Upload New Resume"
+              title="Upload New Resume"
               description="Upload your resume to extract skills and find matching jobs"
             />
             <CardContent>
@@ -382,7 +382,7 @@ export const JobRecommendationsPage = () => {
           {/* Option 2: Use Existing Skills */}
           <Card className="cursor-pointer transition-all hover:border-green-500/60 hover:bg-slate-900/80">
             <CardHeader
-              title="⚡ Use Existing Skills"
+              title="Use Existing Skills"
               description="Search jobs using skills already in your profile"
             />
             <CardContent>
@@ -506,7 +506,7 @@ export const JobRecommendationsPage = () => {
         <Card className="border-blue-500/30 bg-blue-500/10">
           <CardContent className="!space-y-0 pt-0">
             <p className="text-sm text-blue-200">
-              ℹ️ <strong>Note:</strong> This option uses skills from your previously uploaded resume. If you haven't uploaded a resume yet, please use the <strong>"Upload New Resume"</strong> option first.
+              <strong>Note:</strong> This option uses skills from your previously uploaded resume. If you haven't uploaded a resume yet, please use the <strong>"Upload New Resume"</strong> option first.
             </p>
           </CardContent>
         </Card>
