@@ -7,6 +7,7 @@ const LearningResource = require('./LearningResource');
 const { Article, Podcast } = require('./Content');
 const Bookmark = require('./Bookmark');
 const Analytics = require('./Analytics');
+const ActivityLog = require('./ActivityLog');
 
 module.exports = {
   User,
@@ -17,4 +18,5 @@ module.exports = {
   Podcast,
   Bookmark,
   Analytics,
+  ActivityLog,
 };

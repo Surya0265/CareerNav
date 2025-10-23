@@ -267,7 +267,13 @@ export const ResumeUploadPage = () => {
             <form onSubmit={handleUpload} className="space-y-5">
               <FormField
                 label="Resume file"
-                description="Accepted formats: PDF or Word documents (max 10MB)."
+                description={
+                  <div className="space-y-1">
+                    <p>Accepted formats: PDF or Word documents (max 10MB).</p>
+                    <p>Avoid graphical elements and infographics as they may affect resume parsing.</p>
+                    <p>Upload a structured, text-based resume for best results.</p>
+                  </div>
+                }
                 action={
                   <span className="text-xs text-slate-500">
                     {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "Up to 10 MB"}

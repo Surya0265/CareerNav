@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const colors = require('colors');
 const connectDB = require('./config/db');
+const activityLoggingMiddleware = require('./middleware/activityLoggingMiddleware');
 const app = express();
 app.use(cors({
   origin: 'http://localhost:5173', // allow Vite frontend
@@ -34,6 +35,9 @@ const userRoutes = require('./routes/userRoutes');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add activity logging middleware - logs all API requests
+app.use(activityLoggingMiddleware);
 
 app.get('/', (req, res) => {
   res.send('Backend is running');
@@ -93,6 +97,10 @@ app.use('/api/ai', aiRoutes);
 // Add the password reset routes
 const passwordRoutes = require('./routes/passwordRoutes');
 app.use('/api/auth', passwordRoutes);
+
+// Add the activity log routes
+const activityLogRoutes = require('./routes/activityLogRoutes');
+app.use('/api/activity-logs', activityLogRoutes);
 
 app.use((req, res) => {
   console.warn(`No route matched for ${req.method} ${req.originalUrl}`);

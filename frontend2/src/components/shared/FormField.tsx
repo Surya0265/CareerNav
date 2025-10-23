@@ -3,7 +3,7 @@ import { cn } from "../../utils/cn.ts";
 
 interface FormFieldProps extends PropsWithChildren {
   label: string;
-  description?: string;
+  description?: ReactNode;
   action?: ReactNode;
   className?: string;
 }
@@ -21,7 +21,11 @@ export const FormField = ({
       {action}
     </div>
     {description ? (
-      <p className="text-xs text-slate-400">{description}</p>
+      typeof description === "string" ? (
+        <p className="text-xs text-slate-400">{description}</p>
+      ) : (
+        <div className="text-xs text-slate-400">{description}</div>
+      )
     ) : null}
     {children}
   </label>

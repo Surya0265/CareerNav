@@ -3,6 +3,7 @@ const { hashPassword, matchPassword, generateToken } = require('../utils/auth/au
 const crypto = require('crypto');
 const { sendVerificationEmail } = require('../utils/emailService');
 const { validatePasswordStrength } = require('../utils/passwordValidator');
+const { logActivity } = require('../utils/activityLogger');
 
 const SKILL_LEVEL_MAP = {
   beginner: 'Beginner',
@@ -179,6 +180,19 @@ const registerUser = async (req, res) => {
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(user.email)}`;
         await sendVerificationEmail(user.email, verificationToken, verificationUrl);
+
+        // Log signup activity
+        await logActivity({
+          userId: user._id,
+          action: 'SIGNUP',
+          route: '/api/users/signup',
+          method: 'POST',
+          statusCode: 201,
+          description: `New user registered: ${user.email}`,
+          ipAddress: getClientIp(req),
+          userAgent: req.get('user-agent'),
+          metadata: { email: user.email },
+        });
       } catch (emailErr) {
         console.error('Error sending verification email:', emailErr);
       }
@@ -228,6 +242,7 @@ const loginUser = async (req, res) => {
   try {
     console.log('Received POST /api/users/login request');
     const { email, password } = req.body;
+    const ipAddress = getClientIp(req);
 
     // Find user by email
     const user = await User.findOne({ email }).select('+password');
@@ -237,6 +252,20 @@ const loginUser = async (req, res) => {
       if (!user.isVerified) {
         return res.status(403).json({ error: 'Email not verified' });
       }
+
+      // Log successful login
+      await logActivity({
+        userId: user._id,
+        action: 'LOGIN',
+        route: '/api/users/login',
+        method: 'POST',
+        statusCode: 200,
+        description: `User logged in successfully`,
+        ipAddress: ipAddress,
+        userAgent: req.get('user-agent'),
+        metadata: { email: user.email },
+      });
+
       res.json({
         _id: user._id,
         name: user.name,
@@ -247,6 +276,20 @@ const loginUser = async (req, res) => {
         token: generateToken(user._id)
       });
     } else {
+      // Log failed login attempt
+      await logActivity({
+        userId: null,
+        action: 'OTHER',
+        route: '/api/users/login',
+        method: 'POST',
+        statusCode: 401,
+        description: `Failed login attempt for email: ${email}`,
+        ipAddress: ipAddress,
+        userAgent: req.get('user-agent'),
+        metadata: { email },
+        errorMessage: 'Invalid email or password',
+      }).catch(err => console.error('Failed to log failed login:', err));
+
       res.status(401).json({ error: 'Invalid email or password' });
     }
   } catch (error) {
@@ -759,6 +802,19 @@ const addUserSkillsBatch = async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 };
+
+/**
+ * Helper function to extract client IP address
+ */
+function getClientIp(req) {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.ip ||
+    'Unknown'
+  );
+}
 
 module.exports = {
   registerUser,
