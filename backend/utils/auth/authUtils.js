@@ -26,10 +26,11 @@ const matchPassword = async (enteredPassword, hashedPassword) => {
 /**
  * Generate JWT token
  * @param {string} userId - User ID to include in token
+ * @param {string} type - Token type (user or admin), defaults to 'user'
  * @returns {string} - JWT token
  */
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+const generateToken = (userId, type = 'user') => {
+  return jwt.sign({ id: userId, type }, process.env.JWT_SECRET, {
     expiresIn: '30d', // Token expires in 30 days
   });
 };

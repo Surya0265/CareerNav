@@ -6,7 +6,7 @@ const connectDB = require('./config/db');
 const activityLoggingMiddleware = require('./middleware/activityLoggingMiddleware');
 const app = express();
 app.use(cors({
-  origin: 'http://localhost:5173', // allow Vite frontend
+  origin: ['http://localhost:5173', 'http://localhost:5174'], // allow Vite frontends (user and admin)
   credentials: true
 }));
 app.use((req, res, next) => {
@@ -101,6 +101,10 @@ app.use('/api/auth', passwordRoutes);
 // Add the activity log routes
 const activityLogRoutes = require('./routes/activityLogRoutes');
 app.use('/api/activity-logs', activityLogRoutes);
+
+// Add admin routes
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
   console.warn(`No route matched for ${req.method} ${req.originalUrl}`);
