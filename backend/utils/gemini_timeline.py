@@ -482,8 +482,8 @@ def generate_mermaid_chart(target_job, timeline):
         # Main phase node - use an HTML label with a wide inner div so text wraps horizontally
         # Build an inline-friendly title and description (escaped/truncated)
         title_html = f"<strong>{escape_label(title)}</strong>"
-        # Build a detailed description (no duration shown in the phase box)
-        desc_plain = expand_description(title, raw_description, skills_list=skills, projects_list=projects, max_len=500)
+        # Build a meaningful description with full sentences (100 chars)
+        desc_plain = expand_description(title, raw_description, skills_list=skills, projects_list=projects, max_len=100)
         desc_html = escape_label(desc_plain.replace('\n', '<br/>'))
 
         phase_label = (
@@ -496,40 +496,42 @@ def generate_mermaid_chart(target_job, timeline):
         lines.append(f'    {phase_id}["{phase_label}"]')
         phase_ids.append(phase_id)
         
-        # Skills node below this phase - clean format without problematic Unicode
+        # Skills node ABOVE this phase (connected upward)
         skills = phase.get("skills", [])
         if skills:
-            # Render skills inline separated by commas to keep nodes short and wide
-            safe_skills = [safe_truncate(remove_numbered_lists(s), 40) for s in skills[:8]]
+            # Render skills inline separated by commas (reduced to 3)
+            safe_skills = [safe_truncate(remove_numbered_lists(s), 35) for s in skills[:3]]
             skills_inline = ", ".join(safe_skills)
-            if len(skills) > 8:
-                skills_inline += f", +{len(skills) - 8} more"
+            if len(skills) > 3:
+                skills_inline += f", +{len(skills) - 3} more"
             skill_id = f"SK{phase_num}"
             skill_label = (
                 f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
                 # Force the Skills heading to white and use 150px
-                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Skills</div>'
+                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">✓ Skills to Learn</div>'
                 f'<div style="font-size:150px; color:#ffffff!important;">{escape_label(skills_inline)}</div>'
                 f'</div>'
             )
             lines.append(f'    {skill_id}["{skill_label}"]')
-            lines.append(f"    {phase_id} --> {skill_id}")
+            # Connect skill ABOVE the phase (skill -> phase)
+            lines.append(f"    {skill_id} --> {phase_id}")
         
-        # Projects node below this phase - clean format without problematic Unicode
+        # Projects node BELOW this phase (connected downward)
         projects = phase.get("projects", [])
         if projects:
-            safe_projects = [safe_truncate(remove_numbered_lists(p), 80) for p in projects[:6]]
+            safe_projects = [safe_truncate(remove_numbered_lists(p), 70) for p in projects[:2]]
             projects_inline = ", ".join(safe_projects)
-            if len(projects) > 6:
-                projects_inline += f", +{len(projects) - 6} more"
+            if len(projects) > 2:
+                projects_inline += f", +{len(projects) - 2} more"
             project_id = f"PR{phase_num}"
             project_label = (
                 f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
-                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Projects</div>'
+                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Projects to Build</div>'
                 f'<div style="font-size:150px; color:#ffffff!important;">{escape_label(projects_inline)}</div>'
                 f'</div>'
             )
             lines.append(f'    {project_id}["{project_label}"]')
+            # Connect project BELOW the phase (phase -> project)
             lines.append(f"    {phase_id} --> {project_id}")
         
         lines.append("")
