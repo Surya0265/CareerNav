@@ -4,12 +4,13 @@ const YouTubeRecommendation = require('../models/YouTubeRecommendation');
 
 exports.generateYouTubeRecommendations = async (req, res) => {
   try {
-    const { current_skills, target_job, timeframe_months, additional_context } = req.body;
+    const { current_skills, target_job, timeframe_months, language, additional_context } = req.body;
     
     console.log('youtubeController: generateYouTubeRecommendations called with:', {
       current_skills,
       target_job,
       timeframe_months,
+      language,
       additional_context
     });
     
@@ -26,7 +27,8 @@ exports.generateYouTubeRecommendations = async (req, res) => {
       target_job,
       timeframe_months.toString(),
       additional_context ? JSON.stringify(additional_context) : '{}',
-      'youtube'  // mode: "youtube" for YouTube-based timeline
+      'youtube',  // mode: "youtube" for YouTube-based timeline
+      language || 'en'  // language code for YouTube search
     ];
 
     console.log('youtubeController: Spawning Python process with args:', args);
@@ -69,6 +71,7 @@ exports.generateYouTubeRecommendations = async (req, res) => {
             current_skills,
             target_job,
             timeframe_months,
+            language: language || 'en',
             additional_context,
             videos,
           });

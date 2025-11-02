@@ -371,7 +371,7 @@ export const JobRecommendationsPage = () => {
                           setJobsData(payload);
                           setFilteredJobs(payload.jobs || []);
                         }}
-                        className="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white"
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium text-white transition-all duration-200"
                       >
                         View in detail
                       </button>
@@ -383,22 +383,25 @@ export const JobRecommendationsPage = () => {
           </div>
         )}
 
+        
+
         {/* Two Option Cards */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Option 1: Upload New Resume */}
-          <Card className="cursor-pointer transition-all hover:border-blue-500/60 hover:bg-slate-900/80">
+        <div className="max-w-5xl mx-auto w-full">
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Option 1: Upload New Resume */}
+            <Card className="cursor-pointer transition-all hover:border-blue-500/60 hover:bg-slate-900/80">
             <CardHeader
               title="Upload New Resume"
               description="Upload your resume to extract skills and find matching jobs"
             />
-            <CardContent>
+            <CardContent className="p-5">
               <div className="space-y-4">
-                <p className="text-sm text-slate-400">
+                <p className="text-base text-slate-300">
                   Upload a PDF resume to automatically extract your skills and find relevant job opportunities. Your resume will be saved for future reference.
                 </p>
                 <Button
                   onClick={() => setSearchMode("upload")}
-                  className="w-full"
+                  className="w-full px-5 py-3 text-base"
                 >
                   Upload Resume
                 </Button>
@@ -407,26 +410,26 @@ export const JobRecommendationsPage = () => {
           </Card>
 
           {/* Option 2: Use Existing Skills */}
-          <Card className="cursor-pointer transition-all hover:border-green-500/60 hover:bg-slate-900/80">
+          <Card className="cursor-pointer transition-all hover:border-blue-500/60 hover:bg-slate-900/80">
             <CardHeader
               title="Use Existing Skills"
               description="Search jobs using skills already in your profile"
             />
-            <CardContent>
+            <CardContent className="p-5">
               <div className="space-y-4">
-                <p className="text-sm text-slate-400">
+                <p className="text-base text-slate-300">
                   Use the skills from your previously uploaded resume to find job opportunities. Quick and easy search without uploading again.
                 </p>
                 <Button
                   onClick={() => setSearchMode("existing")}
-                  variant="secondary"
-                  className="w-full"
+                  className="w-full px-5 py-3 text-base"
                 >
                   Use Existing Skills
                 </Button>
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
     );
@@ -451,9 +454,12 @@ export const JobRecommendationsPage = () => {
             action={
               <button
                 onClick={resetSearch}
-                className="text-xs text-slate-400 hover:text-slate-300"
+                className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-all duration-200 flex items-center gap-1"
               >
-                ← Back
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back
               </button>
             }
           />
@@ -466,14 +472,20 @@ export const JobRecommendationsPage = () => {
               className="space-y-4"
             >
               <FormField label="Resume (PDF)">
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+                    required
+                  />
+                </div>
                 {resumeFile && (
-                  <p className="mt-2 text-xs text-slate-400">
+                  <p className="mt-3 flex items-center gap-2 text-sm text-green-400">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
                     Selected: {resumeFile.name}
                   </p>
                 )}
@@ -548,9 +560,12 @@ export const JobRecommendationsPage = () => {
             action={
               <button
                 onClick={resetSearch}
-                className="text-xs text-slate-400 hover:text-slate-300"
+                className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-all duration-200 flex items-center gap-1"
               >
-                ← Back
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back
               </button>
             }
           />
@@ -620,7 +635,7 @@ export const JobRecommendationsPage = () => {
           </section>
           <button
             onClick={resetSearch}
-            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
