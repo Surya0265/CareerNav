@@ -81,6 +81,25 @@ export const TimelineView = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between">
+        <section>
+          <h1 className="text-3xl font-bold text-white">Mark Your Progress</h1>
+          <p className="mt-2 text-slate-300">
+            Track your progress through each phase of your career roadmap
+          </p>
+        </section>
+        <button
+          onClick={() => navigate('/timeline')}
+          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back
+        </button>
+      </div>
+
       <Card>
         <CardHeader title={plan.target_job || 'Saved plan'} description={new Date(plan.createdAt).toLocaleString()} />
         <CardContent>

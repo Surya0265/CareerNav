@@ -16,7 +16,7 @@ async function fetchJobs(query, city, country = 'in') {
         page: '1',
         num_pages: '3',
         country,
-        date_posted: 'all',
+        date_posted: 'month',
         city: city
       },
       headers: {
@@ -32,35 +32,8 @@ async function fetchJobs(query, city, country = 'in') {
   }
 }
 
-// Helper function to extract skills from resume and save to DB
-async function extractAndSaveSkills(resumePath, userId) {
-  try {
-    const form = new FormData();
-    form.append('resume', fs.createReadStream(resumePath));
-    
-    const extractResponse = await axios.post('http://127.0.0.1:5000/extract-resume', form, {
-      headers: form.getHeaders(),
-    });
-    
-    const extractedSkills = extractResponse.data?.extracted_content?.basic_info?.skills || [];
-    const skillsByCategory = extractResponse.data?.extracted_content?.skills_by_category || {};
-    
-    // Save to User model
-    if (userId) {
-      await User.findByIdAndUpdate(userId, {
-        skills: {
-          technical: extractedSkills,
-          categories: skillsByCategory
-        }
-      });
-    }
-    
-    return extractedSkills;
-  } catch (err) {
-    console.error('Error extracting skills:', err.message);
-    return [];
-  }
-}
+
+
 
 // Helper function to extract jobs based on skills
 async function extractJobsForSkills(skills, city, country) {
@@ -141,23 +114,34 @@ exports.getJobsByUploadedResume = async (req, res) => {
           category: skill.category || skillsByCategory[skill] || 'Technical'
         }))
       : [];
+
+      // Deduplicate skills by name (case-insensitive)
+      const uniqueSkills = [];
+      const seen = new Set();
+      for (const skill of formattedSkills) {
+        const skillName = skill.name.toLowerCase();
+        if (!seen.has(skillName)) {
+          seen.add(skillName);
+          uniqueSkills.push(skill);
+        }
+      }
     
     // Save skills to authenticated user if available
-    if (req.user && req.user._id) {
-      await User.findByIdAndUpdate(req.user._id, {
-        skills: formattedSkills
-      });
+      if (req.user && req.user._id) {
+        await User.findByIdAndUpdate(req.user._id, {
+          skills: uniqueSkills
+        });
       
-      // Also save to Resume if it exists
-      const userResume = await Resume.findOne({ userId: req.user._id });
-      if (userResume) {
-        userResume.skills = formattedSkills;
-        await userResume.save();
+        // Also save to Resume if it exists
+        const userResume = await Resume.findOne({ userId: req.user._id });
+        if (userResume) {
+          userResume.skills = uniqueSkills;
+          await userResume.save();
+        }
       }
-    }
     
     // Extract skill names for job search
-    const skillNames = formattedSkills.map(skill => skill.name);
+      const skillNames = uniqueSkills.map(skill => skill.name);
     
     // Fetch jobs based on extracted skills
     const allJobs = await extractJobsForSkills(skillNames, city, country);
@@ -268,7 +252,7 @@ exports.getJobsForExtractedSkills = async (req, res) => {
       return res.status(400).json({ error: 'Resume file is required' });
     }
     const city = req.body.city;
-    const country = req.body.country || 'us';
+    const country = req.body.country || 'in';
     if (!city || !country) {
       return res.status(400).json({ error: 'city and country are required' });
     }

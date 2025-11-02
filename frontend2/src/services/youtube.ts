@@ -19,6 +19,7 @@ export interface YouTubeRecommendationsRequest {
   current_skills: string[];
   target_job: string;
   timeframe_months: number;
+  language?: string;
   additional_context?: Record<string, unknown>;
 }
 

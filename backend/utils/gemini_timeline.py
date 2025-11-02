@@ -106,7 +106,7 @@ def create_ai_career_timeline(current_skills, target_job, timeframe_months, addi
 # ===================================================================
 # 🔹 Function 2 — YOUTUBE VIDEO RECOMMENDATIONS (YouTube API)
 # ===================================================================
-def create_youtube_career_timeline(current_skills, target_job, timeframe_months, additional_context=None):
+def create_youtube_career_timeline(current_skills, target_job, timeframe_months, additional_context=None, language="en"):
     """
     Fetch YouTube video recommendations based on skills and target job.
     Returns a list of videos with title, channel, views, and duration.
@@ -114,12 +114,32 @@ def create_youtube_career_timeline(current_skills, target_job, timeframe_months,
     if not YOUTUBE_API_KEY:
         return {"error": "YOUTUBE_API_KEY not set"}
 
+    # Validate and convert language code
+    language = validate_language_code(language)
+    print(f"DEBUG: Using validated language code: {language}", file=sys.stderr)
+
     skills_text = ", ".join(current_skills) if current_skills else "various technical skills"
+    
+    # Get language name for search query enrichment
+    language_names = {
+        "en": "english", "es": "spanish", "fr": "french", "de": "german",
+        "it": "italian", "pt": "portuguese", "ru": "russian", "ja": "japanese",
+        "zh": "chinese", "ko": "korean", "hi": "hindi", "ar": "arabic",
+        "ta": "tamil", "te": "telugu", "kn": "kannada", "mr": "marathi",
+        "gu": "gujarati", "ml": "malayalam", "th": "thai", "vi": "vietnamese",
+        "id": "indonesian", "tr": "turkish", "pl": "polish", "nl": "dutch",
+        "sv": "swedish", "no": "norwegian", "da": "danish", "fi": "finnish",
+        "el": "greek", "he": "hebrew", "ur": "urdu", "bn": "bengali",
+        "pa": "punjabi", "my": "burmese", "km": "khmer"
+    }
+    
+    lang_name = language_names.get(language, "english")
 
     # Generate search terms based on current skills and target job
+    # Include language to help find content in that language
     search_terms = [
-        f"{target_job} tutorial",
-        f"{target_job} course",
+        f"{target_job} tutorial {lang_name}",
+        f"{target_job} course {lang_name}",
         f"{target_job} full course",
         f"learn {target_job}",
         f"{target_job} for beginners",
@@ -129,11 +149,11 @@ def create_youtube_career_timeline(current_skills, target_job, timeframe_months,
     for skill in current_skills:  # Search for all provided skills
         search_terms.append(f"{skill} {target_job}")
         search_terms.append(f"learn {skill} for {target_job}")
-        search_terms.append(f"{skill} tutorial {target_job}")
-        search_terms.append(f"{skill} course {target_job}")
+        search_terms.append(f"{skill} tutorial {lang_name}")
+        search_terms.append(f"{skill} course {lang_name}")
 
     # Fetch videos (20+ minutes duration, any view count)
-    videos = search_youtube_videos(search_terms, min_views=0, min_duration_minutes=20, max_results=6)
+    videos = search_youtube_videos(search_terms, min_views=0, min_duration_minutes=20, max_results=6, language=language)
 
     result = {
         "title": f"Learning Path for {target_job}",
@@ -148,6 +168,137 @@ def create_youtube_career_timeline(current_skills, target_job, timeframe_months,
         ]
     }
     return result
+
+
+# ===================================================================
+# 🔹 Helper Function: Validate and Convert Language Codes
+# ===================================================================
+def validate_language_code(language):
+    """
+    Validate and convert language input to proper ISO 639-1 code.
+    Accepts both full language names and 2-letter codes.
+    """
+    # Map of full language names to ISO 639-1 codes
+    language_map = {
+        "english": "en",
+        "spanish": "es",
+        "french": "fr",
+        "german": "de",
+        "italian": "it",
+        "portuguese": "pt",
+        "russian": "ru",
+        "japanese": "ja",
+        "chinese": "zh",
+        "korean": "ko",
+        "hindi": "hi",
+        "arabic": "ar",
+        "tamil": "ta",
+        "telugu": "te",
+        "kannada": "kn",
+        "marathi": "mr",
+        "gujarati": "gu",
+        "malayalam": "ml",
+        "thai": "th",
+        "vietnamese": "vi",
+        "indonesian": "id",
+        "turkish": "tr",
+        "polish": "pl",
+        "dutch": "nl",
+        "swedish": "sv",
+        "norwegian": "no",
+        "danish": "da",
+        "finnish": "fi",
+        "greek": "el",
+        "hebrew": "he",
+        "urdu": "ur",
+        "bengali": "bn",
+        "punjabi": "pa",
+        "burmese": "my",
+        "khmer": "km",
+    }
+    
+    lang_input = language.strip().lower()
+    
+    # Check if it's a full language name
+    if lang_input in language_map:
+        return language_map[lang_input]
+    
+    # Check if it's already a valid 2-letter code
+    if len(lang_input) == 2 and lang_input.isalpha():
+        return lang_input
+    
+    # If invalid, default to English
+    print(f"DEBUG: Invalid language '{language}', defaulting to English (en)", file=sys.stderr)
+    return "en"
+
+
+# ===================================================================
+# 🔹 Helper Function: Map Language Code to Region Code
+# ===================================================================
+def get_region_from_language(language):
+    """
+    Map language code to region code for YouTube API.
+    This helps YouTube return content that's relevant to the language/region.
+    """
+    language_to_region = {
+        "en": "US",
+        "es": "ES",
+        "fr": "FR",
+        "de": "DE",
+        "it": "IT",
+        "pt": "PT",
+        "ru": "RU",
+        "ja": "JP",
+        "zh": "CN",
+        "ko": "KR",
+        "hi": "IN",
+        "ar": "SA",
+        "ta": "IN",   # Tamil - India
+        "te": "IN",   # Telugu - India
+        "kn": "IN",   # Kannada - India
+        "mr": "IN",   # Marathi - India
+        "gu": "IN",   # Gujarati - India
+        "ml": "IN",   # Malayalam - India
+        "th": "TH",   # Thai - Thailand
+        "vi": "VN",   # Vietnamese - Vietnam
+        "id": "ID",   # Indonesian - Indonesia
+        "tr": "TR",   # Turkish - Turkey
+        "pl": "PL",   # Polish - Poland
+        "nl": "NL",   # Dutch - Netherlands
+        "sv": "SE",   # Swedish - Sweden
+        "no": "NO",   # Norwegian - Norway
+        "da": "DK",   # Danish - Denmark
+        "fi": "FI",   # Finnish - Finland
+        "el": "GR",   # Greek - Greece
+        "he": "IL",   # Hebrew - Israel
+        "ur": "PK",   # Urdu - Pakistan
+        "bn": "BD",   # Bengali - Bangladesh
+        "pa": "IN",   # Punjabi - India
+        "my": "MM",   # Burmese - Myanmar
+        "km": "KH",   # Khmer - Cambodia
+    }
+    return language_to_region.get(language.lower(), "US")  # Default to US if not found
+
+
+# ===================================================================
+# 🔹 Helper Function: Get Language Name from Code
+# ===================================================================
+def get_language_name(language_code):
+    """
+    Get full language name from language code.
+    """
+    language_names = {
+        "en": "english", "es": "spanish", "fr": "french", "de": "german",
+        "it": "italian", "pt": "portuguese", "ru": "russian", "ja": "japanese",
+        "zh": "chinese", "ko": "korean", "hi": "hindi", "ar": "arabic",
+        "ta": "tamil", "te": "telugu", "kn": "kannada", "mr": "marathi",
+        "gu": "gujarati", "ml": "malayalam", "th": "thai", "vi": "vietnamese",
+        "id": "indonesian", "tr": "turkish", "pl": "polish", "nl": "dutch",
+        "sv": "swedish", "no": "norwegian", "da": "danish", "fi": "finnish",
+        "el": "greek", "he": "hebrew", "ur": "urdu", "bn": "bengali",
+        "pa": "punjabi", "my": "burmese", "km": "khmer"
+    }
+    return language_names.get(language_code.lower(), "english")
 
 
 # ===================================================================
@@ -166,7 +317,7 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
     
     for term in search_terms:
         try:
-            print(f"DEBUG: Searching YouTube for: '{term}'", file=sys.stderr)
+            print(f"DEBUG: Searching YouTube for: '{term}' in language: {language}", file=sys.stderr)
             # First API call to get video IDs
             search_url = "https://www.googleapis.com/youtube/v3/search"
             search_params = {
@@ -176,18 +327,23 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
                 "maxResults": 10,
                 "type": "video",
                 "relevanceLanguage": language,
-                "order": "relevance"
+                "hl": language,  # UI language - helps with content matching
+                "order": "relevance",
+                "regionCode": get_region_from_language(language)  # Try to get region code
             }
             
+            # Remove None values from params
+            search_params = {k: v for k, v in search_params.items() if v is not None}
+            
             resp = requests.get(search_url, search_params, timeout=10)
-            print(f"DEBUG: Search API response status: {resp.status_code}", file=sys.stderr)
+            print(f"DEBUG: Search API response status: {resp.status_code} for term '{term}' in {language}", file=sys.stderr)
             if resp.status_code != 200:
                 print(f"ERROR: Search failed with status {resp.status_code}: {resp.text[:200]}", file=sys.stderr)
                 continue
 
             data = resp.json()
             video_ids = [item["id"]["videoId"] for item in data.get("items", [])]
-            print(f"DEBUG: Found {len(video_ids)} video IDs", file=sys.stderr)
+            print(f"DEBUG: Found {len(video_ids)} video IDs for '{term}'", file=sys.stderr)
             
             if not video_ids:
                 continue
@@ -195,9 +351,10 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
             # Second API call to get statistics and contentDetails
             stats_url = "https://www.googleapis.com/youtube/v3/videos"
             stats_params = {
-                "part": "statistics,contentDetails,snippet",
+                "part": "statistics,contentDetails,snippet,topicDetails",
                 "id": ",".join(video_ids),
-                "key": YOUTUBE_API_KEY
+                "key": YOUTUBE_API_KEY,
+                "hl": language  # Ensure language preference in response
             }
             
             stats_resp = requests.get(stats_url, stats_params, timeout=10)
@@ -209,7 +366,7 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
             stats_data = stats_resp.json()
             print(f"DEBUG: Got {len(stats_data.get('items', []))} items with stats", file=sys.stderr)
             
-            # Process and filter videos
+            # Process and filter videos - STRICT LANGUAGE FILTER
             for item in stats_data.get("items", []):
                 try:
                     vid = item["id"]
@@ -217,10 +374,30 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
                     views = int(views_str) if views_str else 0
                     duration = item.get("contentDetails", {}).get("duration", "")
                     title = item["snippet"]["title"]
+                    snippet = item["snippet"]
+                    
+                    # STRICT LANGUAGE FILTERING
+                    # Check if video's default language matches target language
+                    video_language = snippet.get("defaultLanguage", "").lower()
+                    caption_language = snippet.get("defaultAudioLanguage", "").lower()
+                    
+                    # If language info is available, strictly filter
+                    if video_language and video_language != language.lower() and caption_language and caption_language != language.lower():
+                        print(f"DEBUG: [SKIP] Skipping video '{title[:40]}' - Language mismatch. Video: {video_language}, Target: {language}", file=sys.stderr)
+                        continue
+                    
+                    # Additional check: look for language keywords in title
+                    title_lower = title.lower()
+                    language_name = get_language_name(language)
+                    
+                    # Strict: If we have language info and it doesn't match, skip
+                    if video_language and video_language != language.lower():
+                        print(f"DEBUG: [SKIP] Strict language filter: Video language {video_language} != {language}", file=sys.stderr)
+                        continue
                     
                     # Parse duration and convert to minutes
                     duration_minutes = parse_iso_duration_to_minutes(duration)
-                    print(f"DEBUG: Video '{title[:40]}' - Duration: {duration_minutes}m, Views: {views}", file=sys.stderr)
+                    print(f"DEBUG: Video '{title[:40]}' - Duration: {duration_minutes}m, Views: {views}, Language: {video_language}", file=sys.stderr)
                     
                     # Apply filters
                     if views >= min_views and duration_minutes >= min_duration_minutes:
@@ -235,9 +412,9 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
                             "duration": duration_readable,
                             "views_raw": views
                         })
-                        print(f"DEBUG: ✓ Video added", file=sys.stderr)
+                        print(f"DEBUG: [ADDED] Video added (Language: {video_language})", file=sys.stderr)
                     else:
-                        print(f"DEBUG: ✗ Filtered out - Duration: {duration_minutes}m (min: {min_duration_minutes}m), Views: {views} (min: {min_views})", file=sys.stderr)
+                        print(f"DEBUG: [SKIP] Filtered out - Duration: {duration_minutes}m (min: {min_duration_minutes}m), Views: {views} (min: {min_views})", file=sys.stderr)
                 except Exception as e:
                     print(f"ERROR: Processing video failed: {e}", file=sys.stderr)
                     pass
@@ -508,7 +685,7 @@ def generate_mermaid_chart(target_job, timeline):
             skill_label = (
                 f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
                 # Force the Skills heading to white and use 150px
-                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">✓ Skills to Learn</div>'
+                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Skills to Learn</div>'
                 f'<div style="font-size:150px; color:#ffffff!important;">{escape_label(skills_inline)}</div>'
                 f'</div>'
             )
@@ -609,16 +786,17 @@ if __name__ == "__main__":
         timeframe_months = int(sys.argv[3])
         additional_context = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
         mode = sys.argv[5] if len(sys.argv) > 5 else "ai"  # choose "ai" or "youtube"
+        language = sys.argv[6] if len(sys.argv) > 6 else "en"  # language code for YouTube
 
-        print(f"DEBUG: Script called with mode={mode}, len(sys.argv)={len(sys.argv)}", file=sys.stderr)
+        print(f"DEBUG: Script called with mode={mode}, language={language}, len(sys.argv)={len(sys.argv)}", file=sys.stderr)
         print(f"DEBUG: sys.argv={sys.argv}", file=sys.stderr)
         
         if mode == "ai":
             print(f"DEBUG: Calling create_ai_career_timeline", file=sys.stderr)
             result = create_ai_career_timeline(current_skills, target_job, timeframe_months, additional_context)
         else:
-            print(f"DEBUG: Calling create_youtube_career_timeline", file=sys.stderr)
-            result = create_youtube_career_timeline(current_skills, target_job, timeframe_months, additional_context)
+            print(f"DEBUG: Calling create_youtube_career_timeline with language={language}", file=sys.stderr)
+            result = create_youtube_career_timeline(current_skills, target_job, timeframe_months, additional_context, language)
 
         print(json.dumps(result, indent=2))
     except Exception as e:

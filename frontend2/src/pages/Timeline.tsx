@@ -30,6 +30,7 @@ export const TimelinePage = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState<any[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [skillsInput, setSkillsInput] = useState(defaultRequest.current_skills.join(", "));
   const [targetRole, setTargetRole] = useState(defaultRequest.target_job);
@@ -171,6 +172,9 @@ export const TimelinePage = () => {
 
   return (
     <div className="space-y-8">
+      {/* Heading */}
+      <h2 className="text-2xl font-bold text-white">Timeline Plans</h2>
+
       {/* Form Card */}
       <Card>
         <CardHeader
@@ -241,28 +245,53 @@ export const TimelinePage = () => {
                 push({ title: 'Sign in required', description: 'Please login to view your saved timelines', tone: 'info' });
                 return;
               }
-              try {
-                setHistoryLoading(true);
-                const resp = await getTimelineHistory();
-                setHistory(resp.records || []);
-              } catch (err) {
-                console.error('Failed to fetch timeline history', err);
-                push({ title: 'Error', description: 'Failed to fetch timeline history', tone: 'error' });
-              } finally {
-                setHistoryLoading(false);
+              
+              if (showHistory) {
+                setShowHistory(false);
+                setHistory(null);
+              } else {
+                try {
+                  setHistoryLoading(true);
+                  const resp = await getTimelineHistory();
+                  setHistory(resp.records || []);
+                  setShowHistory(true);
+                } catch (err) {
+                  console.error('Failed to fetch timeline history', err);
+                  push({ title: 'Error', description: 'Failed to fetch timeline history', tone: 'error' });
+                } finally {
+                  setHistoryLoading(false);
+                }
               }
             }}
-            className="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
           >
-            {historyLoading ? 'Loading...' : 'Mark your progess'}
+            {historyLoading ? (
+              <>
+                <Spinner />
+                Loading...
+              </>
+            ) : showHistory ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Hide Timeline
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                View & Track
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* History list (if present) */}
-      {history && history.length > 0 && (
+      {/* History list (if present and visible) */}
+      {showHistory && history && history.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Timeline Plans</h2>
           <div className="grid gap-3">
             {history.map((rec: any) => (
               <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
@@ -272,10 +301,10 @@ export const TimelinePage = () => {
                     <div className="text-xs text-slate-500">{rec.current_skills?.join?.(', ') || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
                   </div>
                   <button
-                    className="btn btn-primary bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-300"
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium text-white transition-all duration-200"
                     onClick={() => navigate(`/timeline/${rec._id}`)}
                   >
-                    Mark
+                    View & Mark
                   </button>
                 </div>
               </div>

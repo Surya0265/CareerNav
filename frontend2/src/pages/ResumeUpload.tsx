@@ -245,45 +245,61 @@ export const ResumeUploadPage = () => {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
-      <Card>
-        <CardHeader
-          title={
-            isUploadStep
+      {/* Header Section - Mobile Optimized */}
+      <section className="lg:col-span-2 mb-2">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            {isUploadStep
               ? "Upload your resume"
               : isReviewStep
-              ? "Review extracted details"
-              : "Tell us about your goals"
-          }
-          description={
-            isUploadStep
+              ? "Review your details"
+              : "Your career goals"}
+          </h1>
+          <p className="text-sm md:text-base text-slate-300">
+            {isUploadStep
               ? "We'll scan the file and surface everything we can find."
               : isReviewStep
-              ? "Double-check what we detected so you can correct anything before analysis."
-              : "These preferences guide the personalized recommendations."
-          }
-        />
-        <CardContent>
+              ? "Double-check what we detected. You can correct anything before analysis."
+              : "These preferences guide the personalized recommendations we'll create for you."}
+          </p>
+          {isUploadStep && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                PDF or Word
+              </span>
+              <span className="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                Max 10MB
+              </span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <Card>
+        <CardContent className="pt-6">
           {isUploadStep ? (
-            <form onSubmit={handleUpload} className="space-y-5">
+            <form onSubmit={handleUpload} className="space-y-6">
               <FormField
                 label="Resume file"
                 description={
-                  <div className="space-y-1">
-                    <p>Accepted formats: PDF or Word documents (max 10MB).</p>
-                    <p>Avoid graphical elements and infographics as they may affect resume parsing.</p>
-                    <p>Upload a structured, text-based resume for best results.</p>
+                  <div className="space-y-1 text-xs">
+                    <p>• Accepted formats: PDF or Word documents (max 10MB)</p>
+                    <p>• Avoid graphical elements and infographics for better parsing</p>
+                    <p>• Use structured, text-based resume for best results</p>
                   </div>
                 }
                 action={
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-slate-500 font-medium">
                     {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "Up to 10 MB"}
                   </span>
                 }
               >
                 <label
                   className={cn(
-                    "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 px-6 py-10 text-center transition hover:border-blue-500/60 hover:bg-slate-900/70",
-                    file && "border-blue-500 bg-blue-500/10"
+                    "flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed transition",
+                    file
+                      ? "border-blue-500 bg-blue-500/15 p-8"
+                      : "border-slate-700 bg-slate-900/30 hover:border-blue-500/50 hover:bg-slate-900/50 p-10 md:p-12"
                   )}
                 >
                   <input
@@ -299,20 +315,29 @@ export const ResumeUploadPage = () => {
                       }
                     }}
                   />
-                  <div className="rounded-full bg-blue-500/20 p-3 text-2xl">📁</div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-100">
-                      {file ? file.name : "Drag & drop or browse"}
+                  <div className={cn(
+                    "rounded-full p-3 text-2xl",
+                    file ? "bg-blue-500/30 text-blue-200" : "bg-slate-800 text-slate-300"
+                  )}>
+                    �
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm md:text-base font-semibold text-slate-100">
+                      {file ? file.name : "Drag & drop your resume"}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {file ? "Ready to extract" : "We'll keep your data secure."}
+                      {file ? "Ready to extract and analyze" : "or click to browse files"}
                     </p>
                   </div>
                 </label>
               </FormField>
 
-              <div className="flex items-center gap-4">
-                <Button type="submit" disabled={uploadMutation.isPending || !file}>
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <Button 
+                  type="submit" 
+                  disabled={uploadMutation.isPending || !file}
+                  className="gap-2 min-h-10 md:min-h-9"
+                >
                   {uploadMutation.isPending ? (
                     <span className="flex items-center gap-2">
                       <Spinner /> Extracting
@@ -321,8 +346,8 @@ export const ResumeUploadPage = () => {
                     "Extract details"
                   )}
                 </Button>
-                <span className="text-xs text-slate-500">
-                  We'll store extracted skills to personalize future insights.
+                <span className="text-xs text-slate-400">
+                  We'll keep your data secure and private.
                 </span>
               </div>
             </form>
@@ -337,15 +362,15 @@ export const ResumeUploadPage = () => {
               }}
             >
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Detected name</p>
-                  <p className="mt-2 text-sm font-medium text-slate-100">
+                <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 hover:border-slate-700 transition">
+                  <p className="text-xs uppercase tracking-widest text-slate-500 font-medium">Detected name</p>
+                  <p className="mt-3 text-sm font-semibold text-slate-100">
                     {profileDetails.name || "Not detected"}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Email</p>
-                  <p className="mt-2 text-sm font-medium text-slate-100">
+                <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 hover:border-slate-700 transition">
+                  <p className="text-xs uppercase tracking-widest text-slate-500 font-medium">Email</p>
+                  <p className="mt-3 text-sm font-semibold text-slate-100">
                     {profileDetails.email || "Not detected"}
                   </p>
                 </div>
@@ -482,8 +507,8 @@ export const ResumeUploadPage = () => {
                 <a
                   href="#analysis"
                   className={cn(
-                    buttonVariants({ variant: "ghost", size: "sm" }),
-                    "hidden md:inline-flex"
+                    buttonVariants({ size: "sm" }),
+                    "hidden md:inline-flex gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                   )}
                 >
                   Jump to analysis

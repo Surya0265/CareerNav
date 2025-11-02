@@ -19,11 +19,13 @@ export const YouTubeRecommendationsPage = () => {
   const { youtubeData, setYouTubeData } = useYouTubeRecommendations();
   const [history, setHistory] = useState<any[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { isAuthenticated } = useAuth();
 
   const [skillsInput, setSkillsInput] = useState("");
   const [targetJob, setTargetJob] = useState("");
   const [timeframeMonths, setTimeframeMonths] = useState("6");
+  const [language, setLanguage] = useState("en");
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -49,6 +51,7 @@ export const YouTubeRecommendationsPage = () => {
         current_skills: skillNames,
         target_job: targetJob,
         timeframe_months: parseInt(timeframeMonths),
+        language: language,
         additional_context: {},
       });
     },
@@ -78,15 +81,14 @@ export const YouTubeRecommendationsPage = () => {
 
   if (!youtubeData) {
     return (
-      <div className="space-y-6">
-        <div className="pb-6 border-b border-slate-800">
-          <h1 className="text-4xl font-bold text-blue-400 mb-3">
-            YouTube Learning Path
-          </h1>
-          <p className="text-slate-400 text-sm">
+      <div className="space-y-8">
+        {/* Header */}
+        <section>
+          <h1 className="text-3xl font-bold text-white">YouTube Learning Path</h1>
+          <p className="mt-2 text-slate-300">
             Get personalized YouTube recommendations based on your career goal
           </p>
-        </div>
+        </section>
 
         <div className="flex items-center justify-between">
           <div />
@@ -97,48 +99,99 @@ export const YouTubeRecommendationsPage = () => {
                     push({ title: 'Sign in required', description: 'Please login to view your saved youtube runs', tone: 'info' });
                     return;
                   }
-                  try {
-                    setHistoryLoading(true);
-                    const resp = await getYouTubeHistory();
-                    setHistory(resp.records || []);
-                  } catch (err) {
-                    console.error('Failed to fetch youtube history', err);
-                    push({ title: 'Error', description: 'Failed to fetch youtube history', tone: 'error' });
-                  } finally {
-                    setHistoryLoading(false);
+                  
+                  if (showHistory) {
+                    setShowHistory(false);
+                    setHistory(null);
+                  } else {
+                    try {
+                      setHistoryLoading(true);
+                      const resp = await getYouTubeHistory();
+                      setHistory(resp.records || []);
+                      setShowHistory(true);
+                    } catch (err) {
+                      console.error('Failed to fetch youtube history', err);
+                      push({ title: 'Error', description: 'Failed to fetch youtube history', tone: 'error' });
+                    } finally {
+                      setHistoryLoading(false);
+                    }
                   }
                 }}
-              className="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
             >
-              {historyLoading ? 'Loading...' : 'View history'}
+              {historyLoading ? (
+                <>
+                  <Spinner />
+                  Loading...
+                </>
+              ) : showHistory ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Hide History
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  View History
+                </>
+              )}
             </button>
           </div>
         </div>
 
         {/* History list */}
-        {history && history.length > 0 && (
+        {showHistory && history && history.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Previous Recommendations</h2>
             <div className="grid gap-3">
               {history.map((rec: any) => (
-                <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-slate-300">{(rec.current_skills && rec.current_skills.length > 0)
-                        ? rec.current_skills.map((s: any) => {
-                            if (!s && s !== 0) return 'Unnamed skill';
-                            if (typeof s === 'string') return s;
-                            return s.name || s.skill || s.label || (typeof s._id === 'string' ? `${s._id.slice(0,8)}...` : 'Unnamed skill');
-                          }).join(', ')
-                        : '—'}</div>
-                      <div className="text-xs text-slate-500">{rec.target_job || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
+                <div key={rec._id} className="p-4 bg-slate-900 rounded-lg border border-slate-800 hover:border-blue-500/50 transition-all">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-white mb-1">{rec.target_job || 'Learning Path'}</div>
+                      <div className="text-xs text-slate-400 mb-2">
+                        Skills: {(rec.current_skills && rec.current_skills.length > 0)
+                          ? rec.current_skills.map((s: any) => {
+                              if (!s && s !== 0) return 'Unnamed skill';
+                              if (typeof s === 'string') return s;
+                              return s.name || s.skill || s.label || (typeof s._id === 'string' ? `${s._id.slice(0,8)}...` : 'Unnamed skill');
+                            }).join(', ')
+                          : '—'}
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center gap-2">
+                        <span>{rec.language ? `Language: ${rec.language.toUpperCase()}` : ''}</span>
+                        <span>•</span>
+                        <span>{rec.videos && rec.videos.length} videos</span>
+                        <span>•</span>
+                        <span>{new Date(rec.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {rec.videos && rec.videos.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-400">
+                          Top video: {rec.videos[0].title && rec.videos[0].title.length > 60 ? rec.videos[0].title.substring(0, 60) + '...' : rec.videos[0].title}
+                          {rec.videos[0].views && (
+                            <>
+                              <span className="text-blue-400 ml-2 flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                </svg>
+                                {rec.videos[0].views}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          setYouTubeData({ title: 'Previous run', summary: rec.additional_context?.notes || '', youtube_resources: rec.videos || [], tips: [] });
+                          setYouTubeData({ title: 'Previous history', summary: rec.additional_context?.notes || '', youtube_resources: rec.videos || [], tips: [] });
                         }}
-                        className="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white"
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium text-white transition-all duration-200"
                       >
                         View in detail
                       </button>
@@ -150,7 +203,8 @@ export const YouTubeRecommendationsPage = () => {
           </div>
         )}
 
-        <Card>
+        <div className="max-w-2xl mx-auto">
+          <Card>
           <CardHeader title="Learning Path Details" />
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -189,6 +243,17 @@ export const YouTubeRecommendationsPage = () => {
                 />
               </FormField>
 
+              <FormField label="Preferred Language">
+                <Input
+                  type="text"
+                  placeholder="e.g., en, spanish, tamil, french (2-letter code or full name)"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value.toLowerCase())}
+                  required
+                />
+              
+              </FormField>
+
               <Button
                 type="submit"
                 disabled={mutation.isPending}
@@ -206,6 +271,7 @@ export const YouTubeRecommendationsPage = () => {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -215,7 +281,7 @@ export const YouTubeRecommendationsPage = () => {
       <div className="pb-6 border-b border-slate-800">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-grow">
-            <h1 className="text-4xl font-bold text-blue-400 mb-3">
+            <h1 className="text-4xl font-bold text-white mb-3">
               {youtubeData.title}
             </h1>
             <p className="text-slate-400 text-sm max-w-3xl">
@@ -230,9 +296,12 @@ export const YouTubeRecommendationsPage = () => {
               setTargetJob("");
               setTimeframeMonths("6");
             }}
-            className="flex-shrink-0"
+            className="flex-shrink-0 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
           >
-            ← Back
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Search
           </Button>
         </div>
       </div>
@@ -277,25 +346,14 @@ export const YouTubeRecommendationsPage = () => {
                       {video.views && (
                         <div className="flex items-center gap-2 flex-wrap">
                           <svg
-                            className="w-3 h-3 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                            className="w-4 h-4 flex-shrink-0 text-blue-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                           </svg>
-                          <span>
+                          <span className="text-slate-300 font-medium">
                             {typeof video.views === 'string' 
                               ? video.views 
                               : parseInt(video.views).toLocaleString()} views

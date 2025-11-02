@@ -10,6 +10,10 @@ const YouTubeRecommendationSchema = new mongoose.Schema(
     current_skills: [String],
     target_job: String,
     timeframe_months: Number,
+    language: {
+      type: String,
+      default: 'en'
+    },
     additional_context: mongoose.Schema.Types.Mixed,
     videos: [
       {
@@ -17,6 +21,7 @@ const YouTubeRecommendationSchema = new mongoose.Schema(
         url: String,
         channel: String,
         duration: String,
+        views: String,
         reason: String,
       },
     ],
