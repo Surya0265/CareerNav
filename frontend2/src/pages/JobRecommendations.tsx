@@ -40,6 +40,7 @@ export const JobRecommendationsPage = () => {
   const { jobsData, setJobsData } = useContext(JobRecommendationsContext);
   const [history, setHistory] = useState<any[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { isAuthenticated } = useAuth();
 
   // Fetch fresh user data to ensure skills are loaded
@@ -300,26 +301,52 @@ export const JobRecommendationsPage = () => {
                   push({ title: 'Sign in required', description: 'Please login to view your saved job runs', tone: 'info' });
                   return;
                 }
-                try {
-                  setHistoryLoading(true);
-                  const resp = await getJobRecommendationsHistory();
-                  setHistory(resp.records || []);
-                } catch (err) {
-                  console.error('Failed to fetch job history', err);
-                  push({ title: 'Error', description: 'Failed to fetch job history', tone: 'error' });
-                } finally {
-                  setHistoryLoading(false);
+                
+                if (showHistory) {
+                  setShowHistory(false);
+                  setHistory(null);
+                } else {
+                  try {
+                    setHistoryLoading(true);
+                    const resp = await getJobRecommendationsHistory();
+                    setHistory(resp.records || []);
+                    setShowHistory(true);
+                  } catch (err) {
+                    console.error('Failed to fetch job history', err);
+                    push({ title: 'Error', description: 'Failed to fetch job history', tone: 'error' });
+                  } finally {
+                    setHistoryLoading(false);
+                  }
                 }
               }}
-              className="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-sm"
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
             >
-              {historyLoading ? 'Loading...' : 'View history'}
+              {historyLoading ? (
+                <>
+                  <Spinner />
+                  Loading...
+                </>
+              ) : showHistory ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Hide History
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  View History
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        {/* History list (if present) */}
-        {history && history.length > 0 && (
+        {/* History list (if present and visible) */}
+        {showHistory && history && history.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Previous Recommendations</h2>
             <div className="grid gap-3">
@@ -416,7 +443,8 @@ export const JobRecommendationsPage = () => {
           </p>
         </section>
 
-        <Card>
+        <div className="max-w-2xl mx-auto">
+          <Card>
           <CardHeader
             title="Resume Upload"
             description="Upload your PDF resume and provide your location details"
@@ -488,6 +516,7 @@ export const JobRecommendationsPage = () => {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -503,15 +532,16 @@ export const JobRecommendationsPage = () => {
           </p>
         </section>
 
-        <Card className="border-blue-500/30 bg-blue-500/10">
-          <CardContent className="!space-y-0 pt-0">
-            <p className="text-sm text-blue-200">
-              <strong>Note:</strong> This option uses skills from your previously uploaded resume. If you haven't uploaded a resume yet, please use the <strong>"Upload New Resume"</strong> option first.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="max-w-2xl mx-auto">
+          <Card className="border-blue-500/30 bg-blue-500/10">
+            <CardContent className="!space-y-0 pt-0">
+              <p className="text-sm text-blue-200">
+                <strong>Note:</strong> This option uses skills from your previously uploaded resume. If you haven't uploaded a resume yet, please use the <strong>"Upload New Resume"</strong> option first.
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
+          <Card className="mt-6">
           <CardHeader
             title="Location Details"
             description="Provide your preferred location for job search"
@@ -569,6 +599,7 @@ export const JobRecommendationsPage = () => {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
@@ -589,9 +620,12 @@ export const JobRecommendationsPage = () => {
           </section>
           <button
             onClick={resetSearch}
-            className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2"
           >
-            ← New Search
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Search
           </button>
         </div>
 
@@ -685,21 +719,21 @@ export const JobRecommendationsPage = () => {
             }
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredJobs.map((job: Job, index: number) => (
               <Card key={`${job.company}-${job.title}-${index}`} className="flex flex-col">
-                <CardContent className="!space-y-0 flex-1">
+                <CardContent className="!space-y-0 flex-1 !p-4">
                   <div>
-                    <h3 className="text-base font-semibold text-white leading-tight">
+                    <h3 className="text-lg font-semibold text-white leading-tight">
                       {job.title}
                     </h3>
-                    <p className="mt-1 text-sm font-medium text-blue-300">
+                    <p className="mt-1 text-base font-medium text-blue-300">
                       {job.company}
                     </p>
                   </div>
 
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 text-base text-slate-300">
                       <svg
                         className="w-4 h-4 text-slate-500"
                         fill="none"
