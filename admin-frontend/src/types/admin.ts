@@ -47,7 +47,6 @@ export interface ActivityLog {
 export interface Analytics {
   totalLogs: number
   totalUsers: number
-  totalSessions: number
   avgResponseTime: number
   errorRate: number
   topActions: Array<{ action: string; count: number }>
