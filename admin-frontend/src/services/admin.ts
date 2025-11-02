@@ -64,7 +64,6 @@ export const adminLogsService = {
     return {
       totalLogs: backendData.totalLogs || 0,
       totalUsers: backendData.topUsers?.length || 0,
-      totalSessions: backendData.totalSessions || backendData.topUsers?.length || 0,
       avgResponseTime: 0, // Backend doesn't provide this yet
       errorRate: backendData.errorRate || 0,
       topActions: backendData.logsByAction?.map((action: any) => ({
