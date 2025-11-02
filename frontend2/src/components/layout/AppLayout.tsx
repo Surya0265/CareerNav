@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth.ts";
 import { Button } from "../shared/Button.tsx";
@@ -14,6 +14,8 @@ import {
   Calendar,
   Briefcase,
   Youtube,
+  Menu,
+  X,
 } from "lucide-react";
 
 const navLinks = [
@@ -29,6 +31,7 @@ const navLinks = [
 export const AppLayout = () => {
   const { user, token, logout, setUser } = useAuth();
   const { setLatestResume, setLatestTimeline } = useCareerData();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     setLatestResume(undefined);
@@ -76,17 +79,27 @@ export const AppLayout = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="flex min-h-screen w-full">
-        <aside className="sticky top-0 h-screen hidden w-64 flex-col border-r border-slate-800 bg-slate-950/80 p-6 md:flex overflow-y-auto">
-          <div className="mb-8 space-y-1">
-            <div className="flex items-center gap-3">
+        {/* Sidebar - Toggleable on mobile, always visible on desktop */}
+        <aside className={cn(
+          "fixed md:static left-0 top-0 bottom-0 z-50 w-64 flex-col border-r border-slate-800 bg-slate-950 p-6 overflow-y-auto transition-all duration-300 md:flex md:sticky md:top-0 md:h-screen",
+          mobileMenuOpen ? "flex translate-x-0" : "hidden md:flex -translate-x-full md:translate-x-0"
+        )}>
+          <div className="flex items-center justify-between gap-2 mb-8">
+            <div className="flex items-center gap-2">
               <img src="/careernav.svg" alt="CareerNav" className="h-8 w-auto" />
               <div>
                 <p className="text-xs uppercase tracking-widest text-blue-400">CareerNav</p>
                 <h1 className="text-xl font-semibold text-white">Growth Hub</h1>
               </div>
             </div>
-            <p className="text-xs text-slate-400">Plan, learn, and track your career journey.</p>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden p-1 hover:bg-slate-800 rounded-lg transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
+          <p className="text-xs text-slate-400 mb-6">Plan, learn, and track your career journey.</p>
           <nav className="flex flex-1 flex-col gap-2">
             {navLinks.map((link) => {
               const Icon = link.icon;
@@ -95,16 +108,17 @@ export const AppLayout = () => {
                   key={link.to}
                   to={link.to}
                   end={link.to === "/"}
+                  onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-2 text-sm transition",
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
                       isActive
-                        ? "bg-blue-600/20 text-blue-100"
-                        : "text-slate-300 hover:bg-slate-800/60 hover:text-slate-100"
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
                     )
                   }
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-5 w-5" />
                   <span>{link.label}</span>
                 </NavLink>
               );
@@ -112,59 +126,71 @@ export const AppLayout = () => {
           </nav>
         </aside>
 
-        <div className="flex min-h-screen flex-1 flex-col pt-20">
-          <header className="fixed top-0 left-0 right-0 md:left-64 md:w-[calc(100%-16rem)] z-40 flex flex-col gap-4 border-b border-slate-800 bg-slate-950/80 px-5 py-4 backdrop-blur">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Hey{" "}
-                  {user?.name?.split(" ")[0] ?? "there"}
+        {/* Mobile overlay */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        <div className="flex min-h-screen flex-1 flex-col w-full">
+          {/* Header */}
+          <header className={cn(
+            "fixed top-0 left-0 right-0 z-30 flex flex-col gap-2 border-b border-slate-800 bg-slate-950/95 px-4 py-3 md:px-6 md:py-4 backdrop-blur transition-all duration-300 md:left-64 md:w-[calc(100%-16rem)]"
+          )}>
+            <div className="flex items-center justify-between gap-2">
+              {/* Mobile toggle button and logo (only when sidebar closed) */}
+              <div className="flex items-center gap-2 md:hidden flex-shrink-0">
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 hover:bg-slate-800 rounded-lg transition"
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+                {!mobileMenuOpen && (
+                  <img src="/careernav.svg" alt="CareerNav" className="h-6 w-auto" />
+                )}
+              </div>
+
+              {/* Greeting with user name */}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base md:text-lg font-bold text-white truncate">
+                  {user?.name?.split(" ")[0] ?? "Welcome"}
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 hidden md:block">
                   You&apos;re just a few steps away from your next opportunity.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="hidden text-right md:block">
-                  <p className="text-sm font-medium text-slate-100">
+
+              <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                <div className="hidden text-right md:flex md:flex-col md:items-end md:gap-0.5">
+                  <p className="text-sm font-semibold text-slate-50">
                     {user?.name ?? ""}
                   </p>
                   <p className="text-xs text-slate-400">
                     {user?.email ?? ""}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  Log out
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="whitespace-nowrap text-xs md:text-sm flex-shrink-0"
+                >
+                  Logout
                 </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto md:hidden">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                return (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    end={link.to === "/"}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2 rounded-full px-4 py-2 text-xs",
-                        isActive
-                          ? "bg-blue-600/20 text-blue-100"
-                          : "border border-slate-800 text-slate-300"
-                      )
-                    }
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{link.label}</span>
-                  </NavLink>
-                );
-              })}
-            </div>
+            {/* Mobile nav pills - removed since sidebar is always open */}
           </header>
 
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-10">
+          {/* Main content with proper padding */}
+          <main className={cn(
+            "flex-1 px-4 py-6 md:px-8 md:py-10 transition-all duration-300 w-full",
+            "pt-[6.5rem] md:pt-24"
+          )}>
             <Outlet />
           </main>
         </div>

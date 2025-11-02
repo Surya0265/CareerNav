@@ -5,6 +5,7 @@ import { buttonVariants } from "../components/shared/Button.tsx";
 import { Badge } from "../components/shared/Badge.tsx";
 import { EmptyState } from "../components/shared/EmptyState.tsx";
 import { cn } from "../utils/cn.ts";
+import { BarChart3, TrendingUp, Zap, Check } from "lucide-react";
 
 export const DashboardPage = () => {
   const { latestResume, latestTimeline } = useCareerData();
@@ -24,21 +25,25 @@ export const DashboardPage = () => {
             action={
               <Link
                 to="/analysis"
-                className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  "gap-2"
+                )}
               >
-                View full analysis
+                <BarChart3 className="h-4 w-4" />
+                Full Analysis
               </Link>
             }
           />
           <CardContent>
             {nextSteps.length ? (
-              <ol className="space-y-3 text-sm text-slate-200">
+              <ol className="space-y-4 text-sm text-slate-200">
                 {nextSteps.map((step, index) => (
-                  <li key={step} className="flex gap-3">
-                    <span className="mt-0.5 h-6 w-6 rounded-full border border-blue-500/40 bg-blue-500/10 text-center text-xs font-semibold leading-6 text-blue-200">
+                  <li key={step} className="flex gap-4">
+                    <span className="flex-shrink-0 h-8 w-8 rounded-full border-2 border-blue-500 bg-blue-500/10 text-center leading-[1.75rem] text-xs font-bold text-blue-300">
                       {index + 1}
                     </span>
-                    <span>{step}</span>
+                    <span className="pt-0.5">{step}</span>
                   </li>
                 ))}
               </ol>
@@ -49,9 +54,13 @@ export const DashboardPage = () => {
                 action={
                   <Link
                     to="/resume"
-                    className={cn(buttonVariants({ size: "sm" }))}
+                    className={cn(
+                      buttonVariants({ size: "sm" }),
+                      "gap-2"
+                    )}
                   >
-                    Upload resume
+                    <Zap className="h-4 w-4" />
+                    Upload Resume
                   </Link>
                 }
               />
@@ -59,7 +68,7 @@ export const DashboardPage = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-blue-500/40 bg-blue-500/10">
+        <Card className="border-slate-800 bg-slate-900/40">
           <CardHeader
             title="Top matching roles"
             description="Aligned to your skills and preferences"
@@ -70,19 +79,19 @@ export const DashboardPage = () => {
                 {recommendedRoles.slice(0, 3).map((role) => (
                   <div
                     key={role.title}
-                    className="rounded-xl border border-blue-400/30 bg-slate-950/30 p-4"
+                    className="group rounded-xl border border-slate-700 bg-slate-900/40 p-4 hover:border-slate-600 hover:bg-slate-900/60 transition-all duration-300"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-white">{role.title}</p>
+                      <p className="text-sm font-semibold text-slate-100 group-hover:text-white">{role.title}</p>
                       {role.match_percentage ? (
                         <Badge tone="success">Match {role.match_percentage}%</Badge>
                       ) : null}
                     </div>
                     {role.reasoning ? (
-                      <p className="mt-2 text-xs text-slate-300/80">{role.reasoning}</p>
+                      <p className="mt-2 text-xs text-slate-400">{role.reasoning}</p>
                     ) : null}
                     {role.missing_skills?.length ? (
-                      <div className="mt-3 text-xs text-slate-400">
+                      <div className="mt-3 text-xs text-slate-500">
                         Missing skills: {role.missing_skills.join(", ")}
                       </div>
                     ) : null}
@@ -92,7 +101,7 @@ export const DashboardPage = () => {
             ) : (
               <EmptyState
                 title="No roles yet"
-                description="We&apos;ll recommend roles once you run an analysis."
+                description="We'll recommend roles once you run an analysis."
               />
             )}
           </CardContent>
@@ -107,9 +116,13 @@ export const DashboardPage = () => {
             action={
               <Link
                 to="/timeline"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "sm" }),
+                  "gap-2"
+                )}
               >
-                Open timeline
+                <TrendingUp className="h-4 w-4" />
+                Open Timeline
               </Link>
             }
           />
@@ -119,10 +132,10 @@ export const DashboardPage = () => {
                 {latestTimeline.timeline.slice(0, 4).map((milestone) => (
                   <div
                     key={milestone.title}
-                    className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                    className="group rounded-xl border border-slate-700 bg-slate-900/40 p-4 hover:border-slate-600 hover:bg-slate-900/60 transition-all duration-300"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-100">
+                      <p className="text-sm font-semibold text-slate-100 group-hover:text-white">
                         {milestone.title}
                       </p>
                       {milestone.duration_weeks ? (
@@ -149,9 +162,13 @@ export const DashboardPage = () => {
                 action={
                   <Link
                     to="/timeline"
-                    className={cn(buttonVariants({ size: "sm" }))}
+                    className={cn(
+                      buttonVariants({ size: "sm" }),
+                      "gap-2"
+                    )}
                   >
-                    Generate timeline
+                    <Zap className="h-4 w-4" />
+                    Generate Timeline
                   </Link>
                 }
               />
@@ -171,17 +188,18 @@ export const DashboardPage = () => {
                   <li
                     key={item}
                     className={cn(
-                      "rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
+                      "rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 flex items-start gap-3"
                     )}
                   >
-                    {item}
+                    <Check className="h-4 w-4 flex-shrink-0 mt-0.5 text-emerald-400" />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>
             ) : (
               <EmptyState
                 title="No highlights yet"
-                description="We&apos;ll surface resume insights after your upload."
+                description="We'll surface resume insights after your upload."
               />
             )}
           </CardContent>

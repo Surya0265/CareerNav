@@ -383,7 +383,7 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
                     
                     # If language info is available, strictly filter
                     if video_language and video_language != language.lower() and caption_language and caption_language != language.lower():
-                        print(f"DEBUG: ✗ Skipping video '{title[:40]}' - Language mismatch. Video: {video_language}, Target: {language}", file=sys.stderr)
+                        print(f"DEBUG: [SKIP] Skipping video '{title[:40]}' - Language mismatch. Video: {video_language}, Target: {language}", file=sys.stderr)
                         continue
                     
                     # Additional check: look for language keywords in title
@@ -392,7 +392,7 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
                     
                     # Strict: If we have language info and it doesn't match, skip
                     if video_language and video_language != language.lower():
-                        print(f"DEBUG: ✗ Strict language filter: Video language {video_language} != {language}", file=sys.stderr)
+                        print(f"DEBUG: [SKIP] Strict language filter: Video language {video_language} != {language}", file=sys.stderr)
                         continue
                     
                     # Parse duration and convert to minutes
@@ -412,9 +412,9 @@ def search_youtube_videos(search_terms, max_results=6, min_views=0, min_duration
                             "duration": duration_readable,
                             "views_raw": views
                         })
-                        print(f"DEBUG: ✓ Video added (Language: {video_language})", file=sys.stderr)
+                        print(f"DEBUG: [ADDED] Video added (Language: {video_language})", file=sys.stderr)
                     else:
-                        print(f"DEBUG: ✗ Filtered out - Duration: {duration_minutes}m (min: {min_duration_minutes}m), Views: {views} (min: {min_views})", file=sys.stderr)
+                        print(f"DEBUG: [SKIP] Filtered out - Duration: {duration_minutes}m (min: {min_duration_minutes}m), Views: {views} (min: {min_views})", file=sys.stderr)
                 except Exception as e:
                     print(f"ERROR: Processing video failed: {e}", file=sys.stderr)
                     pass
@@ -685,7 +685,7 @@ def generate_mermaid_chart(target_job, timeline):
             skill_label = (
                 f'<div style="min-width:2200px;display:inline-block;text-align:left;white-space:normal;word-break:normal;overflow-wrap:normal;">'
                 # Force the Skills heading to white and use 150px
-                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">✓ Skills to Learn</div>'
+                f'<div style="font-size:150px; font-weight:700; margin-bottom:6px; color:#ffffff!important;">Skills to Learn</div>'
                 f'<div style="font-size:150px; color:#ffffff!important;">{escape_label(skills_inline)}</div>'
                 f'</div>'
             )

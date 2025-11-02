@@ -48,9 +48,17 @@ export const AnalysisPage = () => {
 
   return (
     <div className="space-y-8">
+      {/* Header Section */}
+      <section>
+        <h1 className="text-3xl font-bold text-white">Career Analysis</h1>
+        <p className="mt-2 text-slate-300">
+          AI-powered insights about your career path, skills, and resume
+        </p>
+      </section>
+
       <Card>
         <CardHeader
-          title="Recommended roles"
+          title="Recommended Roles"
           description="Top matches based on your skills, goals, and resume highlights."
         />
         <CardContent>
@@ -59,13 +67,13 @@ export const AnalysisPage = () => {
               {recommendedRoles.map((role) => (
                 <div
                   key={role.title}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
+                  className="group rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-slate-900/60 p-5 hover:border-blue-500/50 hover:from-blue-500/20 transition-all duration-300"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-base font-semibold text-white">{role.title}</p>
+                    <div className="flex-1">
+                      <p className="text-lg font-bold text-blue-300 group-hover:text-blue-200 transition">{role.title}</p>
                       {role.industry ? (
-                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                        <p className="text-xs uppercase tracking-widest text-slate-400 mt-1">
                           {role.industry}
                         </p>
                       ) : null}
@@ -83,11 +91,12 @@ export const AnalysisPage = () => {
                     </div>
                   </div>
                   {role.reasoning ? (
-                    <p className="mt-3 text-sm text-slate-300">{role.reasoning}</p>
+                    <p className="mt-3 text-sm text-slate-200">{role.reasoning}</p>
                   ) : null}
                   {role.missing_skills?.length ? (
-                    <p className="mt-3 text-xs text-slate-400">
-                      Suggested focus: {role.missing_skills.join(", ")}
+                    <p className="mt-3 text-xs text-slate-400 flex items-center gap-2">
+                      <span className="font-semibold">Suggested focus:</span>
+                      <span>{role.missing_skills.join(", ")}</span>
                     </p>
                   ) : null}
                 </div>
@@ -104,7 +113,7 @@ export const AnalysisPage = () => {
 
       <Card>
         <CardHeader
-          title="Skill gaps & learning path"
+          title="Skill Gaps & Learning Path"
           description="Prioritize the capabilities that will unlock your next role."
         />
         <CardContent>
@@ -113,20 +122,20 @@ export const AnalysisPage = () => {
               {skillGaps.map((gap) => (
                 <div
                   key={gap.skill}
-                  className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5"
+                  className="group rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-slate-900/60 p-5 hover:border-amber-500/60 hover:from-amber-500/25 transition-all duration-300"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-white">{gap.skill}</p>
-                    <span className="text-xs uppercase tracking-wide text-amber-200">
+                    <p className="text-base font-bold text-amber-200 group-hover:text-amber-100">{gap.skill}</p>
+                    <span className="text-xs uppercase tracking-widest text-amber-300 bg-amber-500/20 px-3 py-1 rounded-full">
                       Priority {gap.learning_priority ?? "-"}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs text-amber-100/80">
-                    Target level: {gap.target_level ?? "Advanced"}
+                  <p className="mt-3 text-sm text-amber-100/90">
+                    <span className="font-semibold">Target level:</span> {gap.target_level ?? "Advanced"}
                   </p>
                   {gap.resources?.length ? (
-                    <p className="mt-3 text-xs text-amber-100/70">
-                      Recommended resources: {gap.resources.slice(0, 3).join(", ")}
+                    <p className="mt-3 text-sm text-amber-100/80">
+                      <span className="font-semibold">Recommended resources:</span> {gap.resources.slice(0, 3).join(", ")}
                     </p>
                   ) : null}
                 </div>
@@ -140,72 +149,75 @@ export const AnalysisPage = () => {
           )}
 
           {learningPhases.length ? (
-            <div className="mt-6 space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-                Learning roadmap
-              </h3>
-              {learningPhases.map((phase, index) => (
-                <div
-                  key={phase.phase_number ?? phase.title ?? `phase-${index}`}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
-                >
-                  <p className="text-sm font-semibold text-white">
-                    {phase.phase_number ? `Phase ${phase.phase_number}: ` : ""}
-                    {phase.title ?? "Focused practice"}
-                  </p>
-                  {phase.duration ? (
-                    <p className="text-xs text-slate-400">{phase.duration}</p>
-                  ) : null}
-                  {phase.skills?.length ? (
-                    <p className="mt-2 text-xs text-slate-400">
-                      Focus skills: {phase.skills.join(", ")}
-                    </p>
-                  ) : null}
-                  {phase.resources?.length ? (
-                    <ul className="mt-3 space-y-2 text-xs text-blue-200">
-                      {phase.resources.map((resource, resourceIndex) => {
-                        // Log for debugging - show EXACTLY what's in the resource
-                        if (resourceIndex === 0) {
-                          console.log('[ANALYSIS] First resource FULL DUMP:', resource);
-                          console.log('[ANALYSIS] First resource keys:', Object.keys(resource as any));
-                          console.log('[ANALYSIS] First resource .link:', (resource as any)?.link);
-                          console.log('[ANALYSIS] First resource .externalLink:', (resource as any)?.externalLink);
-                          console.log('[ANALYSIS] First resource .name:', (resource as any)?.name);
-                        }
-                        
-                        const href = (resource as any)?.link || (resource as any)?.externalLink;
-                        const displayName = (resource as any)?.name || (resource as any)?.title || resource?.type || (typeof resource === 'string' ? resource : 'Resource');
-                        const provider = (resource as any)?.provider;
-                        
-                        // Only render links that have valid https:// URLs
-                        if (!href || typeof href !== 'string' || !href.startsWith('http')) {
-                          console.log('[ANALYSIS] Skipping resource (no valid href):', { href, displayName });
+            <div className="mt-8 pt-8 border-t border-slate-800">
+              <h3 className="text-lg font-bold text-white mb-4">Learning Roadmap</h3>
+              <div className="space-y-4">
+                {learningPhases.map((phase, index) => (
+                  <div
+                    key={phase.phase_number ?? phase.title ?? `phase-${index}`}
+                    className="group rounded-xl border border-slate-700 bg-slate-900/40 p-5 hover:border-blue-500/40 hover:bg-slate-900/60 transition-all duration-300"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-600/20 border border-blue-500/40 rounded-lg flex items-center justify-center">
+                        <span className="text-sm font-bold text-blue-300">{phase.phase_number ?? index + 1}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-semibold text-white">
+                          {phase.title ?? "Focused practice"}
+                        </p>
+                        {phase.duration ? (
+                          <p className="text-sm text-slate-400 mt-1">Duration: {phase.duration}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    {phase.skills?.length ? (
+                      <div className="mt-4">
+                        <p className="text-sm text-slate-300 font-medium">Focus Skills:</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {phase.skills.map((skill) => (
+                            <span key={skill} className="text-xs bg-slate-700/50 text-slate-200 px-3 py-1 rounded-full">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {phase.resources?.length ? (
+                      <ul className="mt-4 space-y-2">
+                        <p className="text-sm text-slate-300 font-medium">Resources:</p>
+                        {phase.resources.map((resource, resourceIndex) => {
+                          const href = (resource as any)?.link || (resource as any)?.externalLink;
+                          const displayName = (resource as any)?.name || (resource as any)?.title || resource?.type || (typeof resource === 'string' ? resource : 'Resource');
+                          const provider = (resource as any)?.provider;
+                          
+                          if (!href || typeof href !== 'string' || !href.startsWith('http')) {
+                            return (
+                              <li key={`${phase.title ?? `phase-${index}`}-resource-${resourceIndex}`} className="text-sm text-slate-400">
+                                <span>• {displayName}</span>
+                                {provider && <span className="ml-2 text-xs text-slate-500">({provider})</span>}
+                              </li>
+                            );
+                          }
+                          
                           return (
                             <li key={`${phase.title ?? `phase-${index}`}-resource-${resourceIndex}`}>
-                              <span>{displayName}</span>
-                              {provider && <span className="ml-2 text-xs text-slate-400">({provider})</span>}
+                              <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-2 transition"
+                              >
+                                <span>→ {displayName}</span>
+                                {provider && <span className="text-xs text-slate-500">({provider})</span>}
+                              </a>
                             </li>
                           );
-                        }
-                        
-                        return (
-                          <li key={`${phase.title ?? `phase-${index}`}-resource-${resourceIndex}`}>
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="underline hover:text-white"
-                            >
-                              {displayName}
-                            </a>
-                            {provider && <span className="ml-2 text-xs text-slate-400">({provider})</span>}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : null}
-                </div>
-              ))}
+                        })}
+                      </ul>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </CardContent>
@@ -213,46 +225,49 @@ export const AnalysisPage = () => {
 
       <Card>
         <CardHeader
-          title="Resume analysis"
-          description="Where your resume shines and where it can grow stronger."
+          title="Resume Analysis"
+          description="Detailed insights into your resume strengths and opportunities."
         />
         <CardContent>
           {resumeStrengths.length || resumeGaps.length ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-emerald-200">Strengths</h3>
-                {resumeStrengths.length ? (
-                  <ul className="space-y-2 text-sm text-slate-100">
+            <div className="space-y-6">
+              {/* Strengths Section */}
+              {resumeStrengths.length ? (
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-4">Resume Strengths</h3>
+                  <div className="space-y-3">
                     {resumeStrengths.map((item) => (
-                      <li
+                      <div
                         key={item}
-                        className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3"
+                        className="group rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 to-slate-900/60 p-4 hover:border-emerald-500/60 hover:from-emerald-500/25 transition-all duration-300"
                       >
-                        {item}
-                      </li>
+                        <p className="text-base font-semibold text-emerald-200 group-hover:text-emerald-100">
+                          {item}
+                        </p>
+                      </div>
                     ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-slate-500">No highlights captured yet.</p>
-                )}
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-rose-200">Opportunities</h3>
-                {resumeGaps.length ? (
-                  <ul className="space-y-2 text-sm text-slate-100">
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Gaps Section */}
+              {resumeGaps.length ? (
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-4">Areas for Improvement</h3>
+                  <div className="space-y-3">
                     {resumeGaps.map((item) => (
-                      <li
+                      <div
                         key={item}
-                        className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3"
+                        className="group rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-500/15 to-slate-900/60 p-4 hover:border-rose-500/60 hover:from-rose-500/25 transition-all duration-300"
                       >
-                        {item}
-                      </li>
+                        <p className="text-base font-semibold text-rose-200 group-hover:text-rose-100">
+                          {item}
+                        </p>
+                      </div>
                     ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-slate-500">No obvious gaps identified.</p>
-                )}
-              </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <EmptyState

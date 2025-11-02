@@ -163,7 +163,7 @@ export const YouTubeRecommendationsPage = () => {
                           : '—'}
                       </div>
                       <div className="text-xs text-slate-500 flex items-center gap-2">
-                        <span>{rec.language ? `🌐 ${rec.language.toUpperCase()}` : ''}</span>
+                        <span>{rec.language ? `Language: ${rec.language.toUpperCase()}` : ''}</span>
                         <span>•</span>
                         <span>{rec.videos && rec.videos.length} videos</span>
                         <span>•</span>
