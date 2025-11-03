@@ -60,36 +60,17 @@ exports.registerAdmin = async (req, res) => {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenHash = crypto
-      .createHash('sha256')
-      .update(verificationToken)
-      .digest('hex');
-
-    // Create admin
+    // Create admin (no email verification needed for admin)
     const admin = await Admin.create({
       name,
       email,
       password: hashedPassword,
-      verificationToken: verificationTokenHash,
-      verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-      isVerified: false,
+      isVerified: true,  // Admin accounts are verified immediately
     });
-
-    // Send verification email
-    try {
-      const frontendUrl = process.env.FRONTEND_URL_ADMIN || process.env.FRONTEND_URL || 'http://localhost:5174';
-      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(admin.email)}`;
-      await sendVerificationEmail(admin.email, verificationToken, verificationUrl);
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Don't fail the registration, just notify
-    }
 
     res.status(201).json({
       success: true,
-      message: 'Admin registered successfully. Please verify your email.',
+      message: 'Admin registered successfully.',
       data: {
         _id: admin._id,
         name: admin.name,
@@ -498,7 +479,7 @@ exports.forgotAdminPassword = async (req, res) => {
 
     // Send reset email
     try {
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/reset-password?token=${resetToken}`;
+      const resetUrl = `${process.env.FRONTEND_URL_ADMIN || process.env.FRONTEND_URL || 'http://localhost:5174'}/reset-password?token=${resetToken}`;
       const { sendPasswordResetEmail } = require('../utils/emailService');
       await sendPasswordResetEmail(email, resetToken, resetUrl);
       console.log(`Password reset email sent to ${email}`);
