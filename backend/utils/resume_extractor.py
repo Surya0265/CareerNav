@@ -421,7 +421,6 @@ def extract_basic_info(text, raw_text=None):
     """
     info = {
         'email': None,
-        'phone': None,
         'skills': [],
         'skills_summary': {},
         'experience_keywords': [],
@@ -439,12 +438,8 @@ def extract_basic_info(text, raw_text=None):
     if emails:
         info['email'] = emails[0]
     
-    # Extract phone number (basic pattern)
-    phone_pattern = r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
-    phones = re.findall(phone_pattern, text)
-    if phones:
-        info['phone'] = ''.join(phones[0]) if isinstance(phones[0], tuple) else phones[0]
-    
+
+
     # Extract skills using comprehensive database
     skills = extract_skills_from_text(text)
     info['skills'] = skills

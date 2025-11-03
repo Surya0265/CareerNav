@@ -13,6 +13,7 @@ import { Badge } from "../components/shared/Badge.tsx";
 import { Spinner } from "../components/shared/Spinner.tsx";
 import { useToast } from "../components/shared/ToastContext.ts";
 import { useCareerData } from "../app/providers/CareerDataContext.ts";
+import { useAuth } from "../hooks/useAuth.ts";
 import { cn } from "../utils/cn.ts";
 
 type Step = "upload" | "review" | "preferences";
@@ -39,7 +40,8 @@ export const ResumeUploadPage = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { push } = useToast();
-  const { latestResume, setLatestResume } = useCareerData();
+  const { latestResume, setLatestResume, setIsResumeBeingReplaced } = useCareerData();
+  const { token } = useAuth();
   const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
@@ -55,8 +57,10 @@ export const ResumeUploadPage = () => {
     onSuccess: (data) => {
       console.log('Upload successful, data:', data);
       setLatestResume(data);
-      // Invalidate the latest-resume query to prevent AppLayout from refetching old data
-      queryClient.invalidateQueries({ queryKey: ["latest-resume"] });
+      // Set the query data explicitly to ensure AppLayout gets updated data immediately
+      queryClient.setQueryData(["latest-resume", token], data);
+      // Allow AppLayout to resume fetching
+      setIsResumeBeingReplaced(false);
       setStep("review");
       
       // Scroll to top to show the review section
@@ -98,8 +102,8 @@ export const ResumeUploadPage = () => {
       console.log('Finalize successful, response data:', data);
       console.log('AI Insights in response:', data.ai_insights);
       setLatestResume(data);
-      // Invalidate the latest-resume query to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: ["latest-resume"] });
+      // Set the query data explicitly to ensure AppLayout gets updated data immediately
+      queryClient.setQueryData(["latest-resume", token], data);
       push({
         title: "Preferences saved",
         description: "We tailored the insights to your goals.",
@@ -423,6 +427,8 @@ export const ResumeUploadPage = () => {
                     type="button"
                     variant="ghost"
                     onClick={() => {
+                      // Set flag to prevent AppLayout from auto-refetching old resume
+                      setIsResumeBeingReplaced(true);
                       setFile(null);
                       if (fileInputRef.current) {
                         fileInputRef.current.value = "";
@@ -432,7 +438,8 @@ export const ResumeUploadPage = () => {
                       setExperienceInput("");
                       setProjectsInput("");
                       setLatestResume(undefined);
-                      // Invalidate the query so it doesn't auto-refetch the old resume
+                      // Clear the query cache and invalidate so AppLayout doesn't show stale data
+                      queryClient.setQueryData(["latest-resume", token], null);
                       queryClient.invalidateQueries({ queryKey: ["latest-resume"] });
                       setStep("upload");
                     }}

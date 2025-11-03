@@ -7,6 +7,8 @@ export interface CareerDataContextValue {
   setLatestResume: (data?: ResumeUploadResponse) => void;
   latestTimeline?: TimelineResponse;
   setLatestTimeline: (data?: TimelineResponse) => void;
+  isResumeBeingReplaced: boolean;
+  setIsResumeBeingReplaced: (value: boolean) => void;
 }
 
 export const CareerDataContext = createContext<CareerDataContextValue | null>(null);
