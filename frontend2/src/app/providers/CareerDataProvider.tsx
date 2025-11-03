@@ -27,6 +27,8 @@ export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) =>
     }
   });
 
+  const [isResumeBeingReplaced, setIsResumeBeingReplaced] = useState(false);
+
   const value = useMemo<CareerDataContextValue>(
     () => ({
       latestResume,
@@ -60,8 +62,10 @@ export const CareerDataProvider: React.FC<PropsWithChildren> = ({ children }) =>
           console.warn("CareerDataProvider: failed to persist timeline", e);
         }
       },
+      isResumeBeingReplaced,
+      setIsResumeBeingReplaced,
     }),
-    [latestResume, latestTimeline]
+    [latestResume, latestTimeline, isResumeBeingReplaced]
   );
 
   return <CareerDataContext.Provider value={value}>{children}</CareerDataContext.Provider>;

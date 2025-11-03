@@ -30,7 +30,7 @@ const navLinks = [
 
 export const AppLayout = () => {
   const { user, token, logout, setUser } = useAuth();
-  const { setLatestResume, setLatestTimeline } = useCareerData();
+  const { setLatestResume, setLatestTimeline, isResumeBeingReplaced } = useCareerData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -48,7 +48,7 @@ export const AppLayout = () => {
   const resumeQuery = useQuery({
     queryKey: ["latest-resume", token],
     queryFn: fetchLatestResume,
-    enabled: Boolean(token),
+    enabled: Boolean(token) && !isResumeBeingReplaced,
     retry: false,
     staleTime: 1000 * 60 * 5, // Keep data fresh for 5 minutes
   });
