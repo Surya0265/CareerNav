@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 const { hashPassword, matchPassword, generateToken } = require('../utils/auth/authUtils');
 const crypto = require('crypto');
 const { sendVerificationEmail } = require('../utils/emailService');
@@ -127,6 +128,15 @@ const registerUser = async (req, res) => {
     if (userExists) {
       console.log(`Registration failed: User with email ${email} already exists`);
       return res.status(400).json({ error: 'User already exists' });
+    }
+
+    // Check if an admin with this email already exists
+    const adminExists = await Admin.findOne({ email });
+    if (adminExists) {
+      console.log(`Registration failed: An admin account with email ${email} already exists. An email cannot be both user and admin.`);
+      return res.status(409).json({ 
+        error: 'You are already registered as an Admin. Please login using the Admin login page instead.' 
+      });
     }
 
     // Hash password
@@ -408,7 +418,8 @@ const deleteUserProfile = async (req, res) => {
  */
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find({});
+    // Exclude admin users from user list
+    const users = await User.find({ role: { $ne: 'admin' } });
     res.json(users);
   } catch (error) {
     console.error('Error in getUsers:', error);
@@ -426,6 +437,10 @@ const getUserById = async (req, res) => {
     const user = await User.findById(req.params.id).select('-password');
 
     if (user) {
+      // Check if user is an admin and exclude from being retrieved
+      if (user.role === 'admin') {
+        return res.status(403).json({ error: 'Access denied. Admin users cannot be retrieved.' });
+      }
       res.json(user);
     } else {
       res.status(404).json({ error: 'User not found' });

@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const User = require('../models/User');
 const { hashPassword, matchPassword, generateToken } = require('../utils/auth/authUtils');
 const crypto = require('crypto');
 const { sendVerificationEmail } = require('../utils/emailService');
@@ -34,6 +35,15 @@ exports.registerAdmin = async (req, res) => {
       return res.status(409).json({
         success: false,
         error: 'Admin with this email already exists',
+      });
+    }
+
+    // Check if a regular user with this email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        error: 'You are already registered as a User. Please login using the User login page instead.',
       });
     }
 

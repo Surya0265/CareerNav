@@ -14,6 +14,9 @@ export const getJobRecommendations = async (
     formData.append("resume", params.resume);
     formData.append("city", params.city);
     formData.append("country", params.country);
+    if (params.experience) {
+      formData.append("experience", params.experience.toString());
+    }
 
     const { data } = await apiClient.post<JobRecommendationsResponse>(
       "/jobs/jobs-by-resume",
@@ -27,10 +30,14 @@ export const getJobRecommendations = async (
     return data;
   } else if (params.type === "existing") {
     // Use existing skills from DB
-    const payload = {
+    const payload: any = {
       city: params.city,
       country: params.country,
     };
+    
+    if (params.experience) {
+      payload.experience = params.experience;
+    }
     
     console.log("Sending existing skills request with payload:", payload);
     

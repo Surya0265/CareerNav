@@ -17,6 +17,7 @@ export interface JobRecommendationsRequest {
   resume?: File;
   city: string;
   country: string;
+  experience?: number;
 }
 
 export interface JobRecommendationsError {
