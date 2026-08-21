@@ -2,6 +2,18 @@ node_modules
 .venv
 backend/node_modules
 .env
+.env.local
+.env.production
 backend/uploads
 backend/utils/__pycache__
+backend/__pycache__
 backend.log
+dist/
+*.pyc
+*.log
+.DS_Store
+
+# Production secrets (NEVER commit these)
+.env.production
+*.pem
+*.key

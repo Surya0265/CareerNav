@@ -1,0 +1,49 @@
+services:
+
+  node-backend:
+    image: ${DOCKER_HUB_USERNAME}/careernav-node:latest
+    ports:
+      - "3011:3011"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+      - PORT=3011
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - ADMIN_FRONTEND_URL=${ADMIN_FRONTEND_URL}
+      - RAPIDAPI_KEY=${RAPIDAPI_KEY}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  python-backend:
+    image: ${DOCKER_HUB_USERNAME}/careernav-python:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MONGO_URI=${MONGO_URI}
+      - FLASK_ENV=production
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  admin-frontend:
+    image: ${DOCKER_HUB_USERNAME}/careernav-admin-frontend:latest
+    ports:
+      - "5173:80"
+    restart: always
+
+  user-frontend:
+    image: ${DOCKER_HUB_USERNAME}/careernav-user-frontend:latest
+    ports:
+      - "5174:80"
+    restart: always
