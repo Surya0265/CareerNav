@@ -143,16 +143,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             echo "=== Starting deployment on EC2 ==="
-            cd /home/ubuntu/careernav
+            cd /home/ubuntu/careernav || cd /home/ubuntu/CareerNav
 
-            # Pull latest images
-            docker-compose pull node-backend python-backend user-frontend admin-frontend
+            # Pull latest pre-built images from Docker Hub
+            docker compose -f docker-compose.prod.yml pull
 
-            # Restart only the app containers (not mongo, to preserve data)
-            docker-compose up -d --no-deps node-backend python-backend user-frontend admin-frontend
+            # Restart containers with the newly pulled images
+            docker compose -f docker-compose.prod.yml up -d
 
-            # Remove old dangling images to free disk space
+            # Clean up dangling images to keep EC2 disk healthy
             docker image prune -f
 
             echo "=== Deployment complete! ==="
-            docker-compose ps
+            docker compose -f docker-compose.prod.yml ps
