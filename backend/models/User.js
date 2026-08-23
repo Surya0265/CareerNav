@@ -62,12 +62,25 @@ const UserSchema = new mongoose.Schema(
       type: Date,
       select: false
     },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
     skills: [
       {
         name: { type: String, required: true },
         level: { type: String },
         verified: { type: Boolean, default: false },
         category: { type: String }
+      }
+    ],
+    experience: [
+      {
+        title: { type: String },
+        company: { type: String },
+        years: { type: Number },
+        description: { type: String }
       }
     ],
     preferences: {

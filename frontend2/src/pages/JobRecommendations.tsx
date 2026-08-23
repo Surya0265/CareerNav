@@ -25,6 +25,7 @@ export const JobRecommendationsPage = () => {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("in");
+  const [experienceInput, setExperienceInput] = useState("");
 
   const normalizeCountry = (c?: string) => {
     if (!c) return "in";
@@ -85,11 +86,14 @@ export const JobRecommendationsPage = () => {
         throw new Error("Please enter a country");
       }
 
+      const experienceYears = experienceInput.trim() ? parseInt(experienceInput, 10) : undefined;
+
       return getJobRecommendations({
         type: "upload",
         resume: resumeFile,
         city,
         country: normalizeCountry(country),
+        experience: experienceYears,
       });
     },
     onSuccess: (data) => {
@@ -129,10 +133,13 @@ export const JobRecommendationsPage = () => {
         throw new Error("Please enter a country");
       }
 
+      const experienceYears = experienceInput.trim() ? parseInt(experienceInput, 10) : undefined;
+
       return getJobRecommendations({
         type: "existing",
         city,
         country: normalizeCountry(country),
+        experience: experienceYears,
       });
     },
     onSuccess: (data) => {
@@ -354,9 +361,14 @@ export const JobRecommendationsPage = () => {
                 <div key={rec._id} className="p-3 bg-slate-900 rounded border border-slate-800">
                   <div className="flex items-center justify-between">
                     <div>
-                              <div className="text-sm text-slate-300">{(rec.skills && rec.skills.length > 0)
-                                ? rec.skills.map((s: any) => skillLabel(s)).join(', ')
-                                : '—'}</div>
+                      <div className="text-sm text-slate-300">{(rec.skills && rec.skills.length > 0)
+                        ? rec.skills.map((s: any) => skillLabel(s)).join(', ')
+                        : '—'}</div>
+                      {rec.experience && rec.experience.length > 0 && (
+                        <div className="text-xs text-blue-300 mt-1">
+                          Experience: {rec.experience.map((exp: any) => `${exp.title} (${exp.years || 0} yrs)`).join(', ')}
+                        </div>
+                      )}
                       <div className="text-xs text-slate-500">{rec.city || ''} • {new Date(rec.createdAt).toLocaleString()}</div>
                     </div>
                     <div className="flex gap-2">
@@ -365,6 +377,7 @@ export const JobRecommendationsPage = () => {
                           // Load this run into the UI
                           const payload = {
                             skills: rec.skills || [],
+                            experience: rec.experience || [],
                             jobs: rec.jobs || [],
                             message: rec.message || `Saved run ${new Date(rec.createdAt).toLocaleString()}`,
                           };
@@ -511,6 +524,21 @@ export const JobRecommendationsPage = () => {
                 />
               </FormField>
 
+              <FormField label="Experience (Years) (Optional)">
+                <Input
+                  type="number"
+                  placeholder="e.g., 5"
+                  value={experienceInput}
+                  onChange={(e) => setExperienceInput(e.target.value)}
+                  min="0"
+                  max="70"
+                  className="text-sm"
+                />
+                <p className="mt-2 text-xs text-slate-400">
+                  Enter your years of experience to get relevant job recommendations
+                </p>
+              </FormField>
+
               <Button
                 type="submit"
                 disabled={uploadMutation.isPending}
@@ -595,6 +623,21 @@ export const JobRecommendationsPage = () => {
                   onChange={(e) => setCountry(e.target.value)}
                   required
                 />
+              </FormField>
+
+              <FormField label="Experience (Years) (Optional)">
+                <Input
+                  type="number"
+                  placeholder="e.g., 5"
+                  value={experienceInput}
+                  onChange={(e) => setExperienceInput(e.target.value)}
+                  min="0"
+                  max="70"
+                  className="text-sm"
+                />
+                <p className="mt-2 text-xs text-slate-400">
+                  Enter your years of experience to get relevant job recommendations
+                </p>
               </FormField>
 
               <Button

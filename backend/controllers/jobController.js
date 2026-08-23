@@ -35,14 +35,28 @@ async function fetchJobs(query, city, country = 'in') {
 
 
 
-// Helper function to extract jobs based on skills
-async function extractJobsForSkills(skills, city, country) {
+// Helper function to extract jobs based on skills and experience
+async function extractJobsForSkills(skills, city, country, experienceArr = []) {
   let allJobs = [];
   let seenTitles = new Set();
+  let experienceQuery = "";
   
-  // Try searching for each skill individually
+  // Build experience-based query prefix
+  if (experienceArr && experienceArr.length > 0) {
+    const exp = experienceArr[0];
+    if (exp && exp.title) {
+      experienceQuery = exp.title + " ";
+    }
+    if (exp && exp.years) {
+      if (exp.years >= 5) experienceQuery = "senior " + experienceQuery;
+      else if (exp.years <= 1) experienceQuery = "junior " + experienceQuery;
+      else if (exp.years <= 3) experienceQuery = "mid-level " + experienceQuery;
+    }
+  }
+  
+  // Try searching for each skill individually with experience level
   for (const skill of skills) {
-    const jobs = await fetchJobs(`${skill} jobs`, city, country);
+    const jobs = await fetchJobs(`${experienceQuery}${skill} jobs`, city, country);
     for (const job of jobs) {
       if (!seenTitles.has(job.job_title)) {
         seenTitles.add(job.job_title);
@@ -89,12 +103,13 @@ exports.getJobsByUploadedResume = async (req, res) => {
     
     const city = req.body.city;
     const country = req.body.country || 'us';
+    const manualExperience = req.body.experience; // Optional manual experience input
     
     if (!city || !country) {
       return res.status(400).json({ error: 'city and country are required' });
     }
     
-    // Extract skills from resume
+    // Extract skills and experience from resume
     const form = new FormData();
     form.append('resume', fs.createReadStream(req.file.path));
     
@@ -104,6 +119,21 @@ exports.getJobsByUploadedResume = async (req, res) => {
     
     const skills = extractResponse.data?.extracted_content?.basic_info?.skills || [];
     const skillsByCategory = extractResponse.data?.extracted_content?.skills_by_category || {};
+    let workExperience = extractResponse.data?.extracted_content?.work_experience || [];
+    
+    // Use manual experience if provided, otherwise use extracted experience
+    if (manualExperience !== undefined && manualExperience !== null) {
+      // manualExperience is now a number (years)
+      const yearsOfExperience = parseInt(manualExperience, 10);
+      if (!isNaN(yearsOfExperience)) {
+        workExperience = [{
+          title: 'Professional',
+          years: yearsOfExperience,
+          company: 'Current',
+          description: `${yearsOfExperience} years of experience`
+        }];
+      }
+    }
     
     // Convert skills to the correct format: array of objects with name, level, category
     const formattedSkills = Array.isArray(skills) 
@@ -126,16 +156,18 @@ exports.getJobsByUploadedResume = async (req, res) => {
         }
       }
     
-    // Save skills to authenticated user if available
+    // Save skills and experience to authenticated user if available
       if (req.user && req.user._id) {
         await User.findByIdAndUpdate(req.user._id, {
-          skills: uniqueSkills
+          skills: uniqueSkills,
+          experience: workExperience
         });
       
         // Also save to Resume if it exists
         const userResume = await Resume.findOne({ userId: req.user._id });
         if (userResume) {
           userResume.skills = uniqueSkills;
+          userResume.workExperience = workExperience;
           await userResume.save();
         }
       }
@@ -143,14 +175,15 @@ exports.getJobsByUploadedResume = async (req, res) => {
     // Extract skill names for job search
       const skillNames = uniqueSkills.map(skill => skill.name);
     
-    // Fetch jobs based on extracted skills
-    const allJobs = await extractJobsForSkills(skillNames, city, country);
+    // Fetch jobs based on extracted skills and experience
+    const allJobs = await extractJobsForSkills(skillNames, city, country, workExperience);
 
     // Persist recommendation
     try {
       await JobRecommendation.create({
         user: req.user?._id,
         skills: skillNames,
+        experience: workExperience,
         city,
         country,
         source: 'uploaded',
@@ -161,7 +194,8 @@ exports.getJobsByUploadedResume = async (req, res) => {
     }
 
     res.json({ 
-      skills: skillNames, 
+      skills: skillNames,
+      experience: workExperience,
       jobs: allJobs,
       message: allJobs.length === 0 ? 'No jobs found for your profile/location.' : 'Jobs found successfully'
     });
@@ -187,6 +221,7 @@ exports.getJobsByExistingSkills = async (req, res) => {
     
     const city = req.body?.city;
     const country = req.body?.country || 'us';
+    const manualExperience = req.body?.experience; // Optional manual experience input
     
     console.log('City:', city, 'Country:', country);
     
@@ -215,16 +250,33 @@ exports.getJobsByExistingSkills = async (req, res) => {
     // Skills are stored as: [{ name: "CSS", level: "...", verified: true, category: "..." }, ...]
     const skills = user.skills.map(skill => skill.name || skill);
     
-    console.log(`Fetching jobs for user ${req.user._id} with skills: ${skills.join(', ')}`);
+    // Get experience from user profile or use manual experience if provided
+    let experience = user.experience || [];
     
-    // Fetch jobs based on existing skills
-    const allJobs = await extractJobsForSkills(skills, city, country);
+    if (manualExperience !== undefined && manualExperience !== null) {
+      // manualExperience is now a number (years)
+      const yearsOfExperience = parseInt(manualExperience, 10);
+      if (!isNaN(yearsOfExperience)) {
+        experience = [{
+          title: 'Professional',
+          years: yearsOfExperience,
+          company: 'Current',
+          description: `${yearsOfExperience} years of experience`
+        }];
+      }
+    }
+    
+    console.log(`Fetching jobs for user ${req.user._id} with skills: ${skills.join(', ')} and experience: ${JSON.stringify(experience)}`);
+    
+    // Fetch jobs based on existing skills and experience
+    const allJobs = await extractJobsForSkills(skills, city, country, experience);
 
     // Persist recommendation
     try {
       await JobRecommendation.create({
         user: req.user._id,
         skills,
+        experience,
         city,
         country,
         source: 'existing',
@@ -235,7 +287,8 @@ exports.getJobsByExistingSkills = async (req, res) => {
     }
 
     res.json({ 
-      skills, 
+      skills,
+      experience,
       jobs: allJobs,
       message: allJobs.length === 0 ? 'No jobs found for your profile/location.' : 'Jobs found successfully'
     });
