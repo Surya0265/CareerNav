@@ -1,25 +1,26 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+dotenv.config();
+
 const colors = require('colors');
 const connectDB = require('./config/db');
 const activityLoggingMiddleware = require('./middleware/activityLoggingMiddleware');
 const app = express();
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    process.env.FRONTEND_URL,       // user frontend (CloudFront URL in prod)
-    process.env.ADMIN_FRONTEND_URL, // admin frontend (CloudFront URL in prod)
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) return callback(null, true);
+    return callback(null, true);
+  },
   credentials: true
 }));
+
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
-// Load environment variables
-dotenv.config();
 
 console.log('Environment loaded, checking database connection variables...');
 if (!process.env.MONGO_URI) {

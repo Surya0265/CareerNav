@@ -21,7 +21,7 @@ export const AdminForgotPassword: React.FC = () => {
 
     setIsLoading(true)
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3011/api';
+      const apiBase = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:3011/api` : 'http://localhost:3011/api');
       const response = await fetch(`${apiBase}/admin/forgot-password`, {
         method: 'POST',
         headers: {
