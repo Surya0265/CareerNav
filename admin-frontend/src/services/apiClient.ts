@@ -1,11 +1,11 @@
 import axios from 'axios'
 
 const getBaseUrl = () => {
+  if (typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    return `http://${window.location.hostname}:3011/api`;
+  }
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
-  }
-  if (typeof window !== "undefined" && window.location.hostname) {
-    return `http://${window.location.hostname}:3011/api`;
   }
   return "http://localhost:3011/api";
 };
@@ -17,8 +17,16 @@ const apiClient = axios.create({
   },
 })
 
-// Add token to requests
+// Add token and dynamic hostname rewrite to requests
 apiClient.interceptors.request.use((config) => {
+  if (typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    if (config.baseURL && config.baseURL.includes("localhost")) {
+      config.baseURL = config.baseURL.replace("localhost", window.location.hostname);
+    }
+    if (config.url && config.url.includes("localhost")) {
+      config.url = config.url.replace("localhost", window.location.hostname);
+    }
+  }
   const token = localStorage.getItem('adminToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
