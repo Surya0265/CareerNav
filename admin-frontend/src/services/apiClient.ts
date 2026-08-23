@@ -1,17 +1,7 @@
 import axios from 'axios'
 
-const getBaseUrl = () => {
-  if (typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    return `http://${window.location.hostname}:3011/api`;
-  }
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  return "http://localhost:3011/api";
-};
-
 const apiClient = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
