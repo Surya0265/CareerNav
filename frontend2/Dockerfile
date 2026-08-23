@@ -9,8 +9,7 @@ RUN npm install
 
 # Copy all source files and build
 COPY . .
-# Limit Node heap to 512MB — prevents OOM on EC2 t3.micro (1GB RAM)
-RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
+RUN npm run build
 # Output is in /app/dist
 
 # ─── Stage 2: Serve with Nginx (tiny, fast, production-grade) ────────────────
