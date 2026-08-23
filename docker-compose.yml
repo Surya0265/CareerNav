@@ -1,0 +1,85 @@
+services:
+
+  # ─── Node.js Main API Backend ─────────────────────────────────────────────
+  node-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3011:3011"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      mongo:
+        condition: service_healthy    # Wait for Mongo to be HEALTHY, not just started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3011/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ─── Python Flask AI Backend ──────────────────────────────────────────────
+  python-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.python
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ─── Admin Frontend (React + Nginx) ──────────────────────────────────────
+  admin-frontend:
+    build: ./admin-frontend
+    ports:
+      - "5173:80"            # Host 5173 → Container Nginx port 80
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─── User Frontend (React + Nginx) ───────────────────────────────────────
+  user-frontend:
+    build: ./frontend2
+    ports:
+      - "5174:80"            # Host 5174 → Container Nginx port 80
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─── MongoDB Database ─────────────────────────────────────────────────────
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  mongo-data:

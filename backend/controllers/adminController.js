@@ -282,7 +282,7 @@ exports.resendVerificationEmail = async (req, res) => {
 
     // Send verification email
     try {
-      const frontendUrl = process.env.FRONTEND_URL_ADMIN || process.env.FRONTEND_URL || 'http://localhost:5174';
+      const frontendUrl = process.env.FRONTEND_URL_ADMIN || process.env.FRONTEND_URL || 'http://localhost:5173';
       const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}&email=${encodeURIComponent(admin.email)}`;
       await sendVerificationEmail(admin.email, verificationToken, verificationUrl);
     } catch (emailError) {

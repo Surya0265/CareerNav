@@ -6,7 +6,12 @@ const connectDB = require('./config/db');
 const activityLoggingMiddleware = require('./middleware/activityLoggingMiddleware');
 const app = express();
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'], // allow Vite frontends (user and admin)
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    process.env.FRONTEND_URL,       // user frontend (CloudFront URL in prod)
+    process.env.ADMIN_FRONTEND_URL, // admin frontend (CloudFront URL in prod)
+  ].filter(Boolean),
   credentials: true
 }));
 app.use((req, res, next) => {
