@@ -17,6 +17,9 @@ services:
       - FRONTEND_URL=${FRONTEND_URL}
       - ADMIN_FRONTEND_URL=${ADMIN_FRONTEND_URL}
       - RAPIDAPI_KEY=${RAPIDAPI_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - PYTHON_BACKEND_URL=http://python-backend:5000
     restart: always
     logging:
       driver: "json-file"

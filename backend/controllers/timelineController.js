@@ -76,9 +76,17 @@ exports.generateCareerTimeline = async (req, res) => {
     ];
 
     console.log('timelineController: Spawning Python process with args:', args);
-    const py = spawn('python', ['utils/gemini_timeline.py', ...args]);
+    const pythonCmd = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
+    const py = spawn(pythonCmd, ['utils/gemini_timeline.py', ...args]);
     let data = '';
     let error = '';
+
+    py.on('error', (err) => {
+      console.error('timelineController: Failed to start Python process:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to start AI timeline process: ' + err.message });
+      }
+    });
 
     py.stdout.on('data', (chunk) => {
       data += chunk.toString();
@@ -95,6 +103,7 @@ exports.generateCareerTimeline = async (req, res) => {
       }
     });
   py.on('close', async (code) => {
+      if (res.headersSent) return;
       console.log('timelineController: Python process closed with code:', code, 'error:', error, 'data length:', data.length);
       
       // Check for gRPC timeout error and ignore it if data was successfully returned

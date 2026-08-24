@@ -22,7 +22,8 @@ exports.sendToPythonLLM = async ({ filePath, fileData, fileName = 'resume.pdf', 
   form.append('goals', goals);
   form.append('location', location);
 
-  const response = await axios.post('http://127.0.0.1:5000/process', form, {
+  const pythonUrl = process.env.PYTHON_BACKEND_URL || 'http://python-backend:5000';
+  const response = await axios.post(`${pythonUrl}/process`, form, {
     headers: form.getHeaders(),
   });
 

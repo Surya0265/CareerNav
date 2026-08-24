@@ -70,8 +70,8 @@ router.post('/analyze-existing', protect, async (req, res) => {
       experienceLevel
     };
 
-    // Call Python AI service
-    const aiAnalysisResponse = await fetch('http://127.0.0.1:5000/ai/career-recommendations', {
+    const pythonUrl = process.env.PYTHON_BACKEND_URL || 'http://python-backend:5000';
+    const aiAnalysisResponse = await fetch(`${pythonUrl}/ai/career-recommendations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -133,7 +133,8 @@ router.post('/analyze-resume', protect, upload.single('resume'), async (req, res
       const blob = new Blob([fileBuffer], { type: req.file.mimetype });
       formData.append('resume', blob, req.file.filename);
 
-      const extractResponse = await fetch('http://127.0.0.1:5000/extract-skills', {
+      const pythonUrl = process.env.PYTHON_BACKEND_URL || 'http://python-backend:5000';
+      const extractResponse = await fetch(`${pythonUrl}/extract-skills`, {
         method: 'POST',
         body: formData
       });
@@ -210,7 +211,7 @@ router.post('/analyze-resume', protect, upload.single('resume'), async (req, res
       // Step 4: Call AI analysis service
       console.log('Calling Flask AI service with:', { skillsByCategory, preferences, experienceLevel });
       
-      const aiAnalysisResponse = await fetch('http://127.0.0.1:5000/ai/career-recommendations', {
+      const aiAnalysisResponse = await fetch(`${pythonUrl}/ai/career-recommendations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +280,8 @@ router.post('/skill-suggestions', protect, async (req, res) => {
     ];
 
     // Call AI service for skill suggestions
-    const aiResponse = await fetch('http://127.0.0.1:5000/ai/skill-improvements', {
+    const pythonUrl = process.env.PYTHON_BACKEND_URL || 'http://python-backend:5000';
+    const aiResponse = await fetch(`${pythonUrl}/ai/skill-improvements`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

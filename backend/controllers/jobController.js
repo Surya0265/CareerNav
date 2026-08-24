@@ -312,7 +312,8 @@ exports.getJobsForExtractedSkills = async (req, res) => {
     // Send resume to Python backend for extraction
     const form = new FormData();
     form.append('resume', fs.createReadStream(req.file.path));
-    const extractResponse = await axios.post('http://127.0.0.1:5000/extract-resume', form, {
+    const pythonUrl = process.env.PYTHON_BACKEND_URL || 'http://python-backend:5000';
+    const extractResponse = await axios.post(`${pythonUrl}/extract-resume`, form, {
       headers: form.getHeaders(),
     });
     const skills = extractResponse.data?.extracted_content?.basic_info?.skills || [];

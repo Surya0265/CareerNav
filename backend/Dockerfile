@@ -6,6 +6,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 
+# Install Python and dependencies for AI timeline & YouTube utilities
+RUN apk add --no-cache python3 py3-pip && \
+    python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir requests python-dotenv google-generativeai
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy source code
 COPY . .
 
