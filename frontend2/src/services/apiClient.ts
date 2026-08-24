@@ -7,19 +7,10 @@ export const apiClient = axios.create({
   withCredentials: false,
 });
 
-// Add request interceptor to dynamically rewrite URLs and log requests
+// Add request interceptor for logging
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-      if (config.baseURL && config.baseURL.includes("localhost")) {
-        config.baseURL = config.baseURL.replace("localhost", window.location.hostname);
-      }
-      if (config.url && config.url.includes("localhost")) {
-        config.url = config.url.replace("localhost", window.location.hostname);
-      }
-    }
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.baseURL || ""}${config.url}`, {
-      headers: config.headers,
+    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
       data: config.data,
     });
     return config;

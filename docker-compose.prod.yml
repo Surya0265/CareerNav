@@ -40,10 +40,14 @@ services:
     image: ${DOCKER_HUB_USERNAME}/careernav-admin-frontend:latest
     ports:
       - "5173:80"
+    depends_on:
+      - node-backend
     restart: always
 
   user-frontend:
     image: ${DOCKER_HUB_USERNAME}/careernav-user-frontend:latest
     ports:
       - "5174:80"
+    depends_on:
+      - node-backend
     restart: always
