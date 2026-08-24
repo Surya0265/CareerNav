@@ -4,6 +4,9 @@ services:
     image: ${DOCKER_HUB_USERNAME}/careernav-node:latest
     ports:
       - "3011:3011"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - MONGO_URI=${MONGO_URI}
       - JWT_SECRET=${JWT_SECRET}
@@ -25,6 +28,9 @@ services:
     image: ${DOCKER_HUB_USERNAME}/careernav-python:latest
     ports:
       - "5000:5000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - MONGO_URI=${MONGO_URI}

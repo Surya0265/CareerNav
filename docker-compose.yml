@@ -7,6 +7,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3011:3011"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - ./backend/.env
     depends_on:
@@ -27,6 +30,9 @@ services:
       dockerfile: Dockerfile.python
     ports:
       - "5000:5000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - ./backend/.env
     depends_on:
